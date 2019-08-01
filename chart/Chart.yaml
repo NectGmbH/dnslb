@@ -1,0 +1,3 @@
+name: dnslb
+description: Controller which updates dns records
+version: 0.1.0
