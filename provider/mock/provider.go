@@ -62,7 +62,7 @@ func (p *Provider) UpdateZone(zone dns.Zone) error {
 
     for i, z := range p.state {
         if z.Name == zone.Name {
-            p.state[i] = z
+            p.state[i] = zone
             return nil
         }
     }
