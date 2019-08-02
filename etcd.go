@@ -77,6 +77,9 @@ func (e *ETCDMock) Init(endpoints []string) error {
 
 // Set sets the value for a specific key.
 func (e *ETCDMock) Set(key string, value string) error {
+    e.lock.Lock()
+    defer e.lock.Unlock()
+
     e.state[key] = value
 
     return nil
@@ -84,6 +87,9 @@ func (e *ETCDMock) Set(key string, value string) error {
 
 // Get retrieves the value for a specific key.
 func (e *ETCDMock) Get(key string) (string, error) {
+    e.lock.Lock()
+    defer e.lock.Unlock()
+
     val, ok := e.state[key]
     if !ok {
         return "", fmt.Errorf("no value for key `%s` found", key)

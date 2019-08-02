@@ -12,6 +12,12 @@ import (
     "github.com/sirupsen/logrus"
 )
 
+// ETCDControllerIntervalOpts define overrides for the intervals
+type ETCDControllerIntervalOpts struct {
+    Status  time.Duration
+    Monitor time.Duration
+}
+
 // ETCDController represents a controller which checks the upstream etcd health statuses and updated the local state
 type ETCDController struct {
     metrics            *Metrics
@@ -33,7 +39,7 @@ type ETCDController struct {
 }
 
 // NewETCDController creates a new controller
-func NewETCDController(agents []string, etcd ETCDProvider, wantedLBs []Loadbalancer, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time) (*ETCDController, error) {
+func NewETCDController(agents []string, etcd ETCDProvider, wantedLBs []Loadbalancer, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time, intervals *ETCDControllerIntervalOpts) *ETCDController {
     ctrl := &ETCDController{
         wanted:          wantedLBs,
         updates:         updates,
@@ -46,7 +52,12 @@ func NewETCDController(agents []string, etcd ETCDProvider, wantedLBs []Loadbalan
         etcd:            etcd,
     }
 
-    return ctrl, nil
+    if intervals != nil {
+        ctrl.statusInterval = intervals.Status
+        ctrl.monitorInterval = intervals.Monitor
+    }
+
+    return ctrl
 }
 
 // Run starts the controller in a async, non blocking way
@@ -67,6 +78,7 @@ func (c *ETCDController) Run() {
 func (c *ETCDController) statusLoop() {
     c.statusLoopStarted = true
     defer (func() { c.statusLoopStarted = false })()
+    logrus.Infof("status loop started.")
 
     for {
         select {
@@ -79,14 +91,20 @@ func (c *ETCDController) statusLoop() {
             logrus.Debugf("etcd-controller: started syncing status")
             err := c.syncStatus()
             if err != nil {
-                c.metrics.ErrorsTotal.Inc()
-                c.metrics.ErrorsETCD.Inc()
+                if c.metrics != nil {
+                    c.metrics.ErrorsTotal.Inc()
+                    c.metrics.ErrorsETCD.Inc()
+                }
+
                 logrus.Errorf("etcd-controller: failed syncing status, see: %v", err)
 
             } else {
                 duration := time.Since(now)
                 logrus.Debugf("etcd-controller: finished syncing status in %v", duration)
-                c.metrics.ETCDSyncTime.Observe(duration.Seconds() * 1e3)
+
+                if c.metrics != nil {
+                    c.metrics.ETCDSyncTime.Observe(duration.Seconds() * 1e3)
+                }
             }
 
             c.lastCycle <- time.Now()
@@ -100,15 +118,19 @@ func (c *ETCDController) syncStatus() error {
     // - Retrieve status for all known agents ----------------------------------
     endpointToHealthy := make(map[string]int)
 
-    c.metrics.AgentsTotal.Set(float64(len(c.agents)))
+    if c.metrics != nil {
+        c.metrics.AgentsTotal.Set(float64(len(c.agents)))
+    }
+
     downAgents := 0
 
     for _, agent := range c.agents {
         statuses, err := c.getStatusFromAgent(agent)
         if err != nil {
-            c.metrics.AgentsToHealthyEndpoints.
-                WithLabelValues(agent).
-                Set(0)
+
+            if c.metrics != nil {
+                c.metrics.AgentsToHealthyEndpoints.WithLabelValues(agent).Set(0)
+            }
 
             downAgents++
             logrus.Errorf("couldn't get status for agent `%s`, see: %v", agent, err)
@@ -128,14 +150,17 @@ func (c *ETCDController) syncStatus() error {
             endpointToHealthy[key] = endpointToHealthy[key] + 1
         }
 
-        c.metrics.AgentsToHealthyEndpoints.
-            WithLabelValues(agent).
-            Set(numHealthy)
+        if c.metrics != nil {
+            c.metrics.AgentsToHealthyEndpoints.WithLabelValues(agent).Set(numHealthy)
+        }
     }
 
     upAgents := len(c.agents) - downAgents
-    c.metrics.AgentsUp.Set(float64(upAgents))
-    c.metrics.AgentsDown.Set(float64(downAgents))
+
+    if c.metrics != nil {
+        c.metrics.AgentsUp.Set(float64(upAgents))
+        c.metrics.AgentsDown.Set(float64(downAgents))
+    }
 
     // - Map to LBs & take only endpoints/lbs where majority think its healthy -
     current := make([]Loadbalancer, 0)
@@ -167,17 +192,11 @@ func (c *ETCDController) syncStatus() error {
             currentLB.Endpoints = append(currentLB.Endpoints, endpoint)
         }
 
-        c.metrics.LBTotalEndpoints.
-            WithLabelValues(currentLB.Name).
-            Set(float64(len(wantedLB.Endpoints)))
-
-        c.metrics.LBHealthyEndpoints.
-            WithLabelValues(currentLB.Name).
-            Set(healthyEP)
-
-        c.metrics.LBUnhealthyEndpoints.
-            WithLabelValues(currentLB.Name).
-            Set(unhealthyEP)
+        if c.metrics != nil {
+            c.metrics.LBTotalEndpoints.WithLabelValues(currentLB.Name).Set(float64(len(wantedLB.Endpoints)))
+            c.metrics.LBHealthyEndpoints.WithLabelValues(currentLB.Name).Set(healthyEP)
+            c.metrics.LBUnhealthyEndpoints.WithLabelValues(currentLB.Name).Set(unhealthyEP)
+        }
 
         if len(currentLB.Endpoints) == 0 {
             logrus.WithFields(logrus.Fields{
@@ -218,7 +237,9 @@ func (c *ETCDController) getStatusFromAgent(agent string) ([]health.HealthCheckS
     t := time.Unix(int64(status.Time), 0)
     since := time.Since(t)
 
-    c.metrics.AgentsStatusAge.WithLabelValues(agent).Set(since.Seconds())
+    if c.metrics != nil {
+        c.metrics.AgentsStatusAge.WithLabelValues(agent).Set(since.Seconds())
+    }
 
     if since > c.maxStatusAge {
         return nil, fmt.Errorf(
@@ -234,6 +255,7 @@ func (c *ETCDController) getStatusFromAgent(agent string) ([]health.HealthCheckS
 func (c *ETCDController) monitorLoop() {
     c.monitorLoopStarted = true
     defer (func() { c.monitorLoopStarted = false })()
+    logrus.Infof("monitor loop started.")
 
     for {
         select {
@@ -246,14 +268,20 @@ func (c *ETCDController) monitorLoop() {
             logrus.Debugf("etcd-controller: started syncing monitors")
             err := c.syncMonitors()
             if err != nil {
-                c.metrics.ErrorsTotal.Inc()
-                c.metrics.ErrorsETCD.Inc()
+                if c.metrics != nil {
+                    c.metrics.ErrorsTotal.Inc()
+                    c.metrics.ErrorsETCD.Inc()
+                }
+
                 logrus.Errorf("etcd-controller: failed syncing monitors, see: %v", err)
 
             } else {
                 duration := time.Since(now)
                 logrus.Debugf("etcd-controller: finished syncing monitors in %v", duration)
-                c.metrics.ETCDMonitorSyncTime.Observe(duration.Seconds() * 1e3)
+
+                if c.metrics != nil {
+                    c.metrics.ETCDMonitorSyncTime.Observe(duration.Seconds() * 1e3)
+                }
             }
 
             time.Sleep(c.monitorInterval)
@@ -285,7 +313,7 @@ func (c *ETCDController) syncMonitors() error {
     // - Get monitors from etcd ------------------------------------------------
     value, err := c.etcd.Get("monitors")
     if err != nil {
-        logrus.Errorf("couldn't retrieve monitors from etcd, see: %v", err)
+        logrus.Warnf("couldn't retrieve monitors from etcd, see: %v", err)
     } else {
         // - Get hash & compare to see if we need to do anything -------------------
         remoteMonitors := value

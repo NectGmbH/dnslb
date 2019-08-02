@@ -12,6 +12,12 @@ import (
     "github.com/sirupsen/logrus"
 )
 
+// DNSControllerIntervalOpts define overrides for the intervals
+type DNSControllerIntervalOpts struct {
+    CurrentZoneSyncEnforce time.Duration
+    Sync                   time.Duration
+}
+
 // DNSController represents a controller which checks the upstream (e.g. autodns) configuration, compares it with the wanted state and does changes
 type DNSController struct {
     metrics                        *Metrics
@@ -39,8 +45,8 @@ type DNSController struct {
 }
 
 // NewDNSController creates a new controller
-func NewDNSController(dnsProvider dns.Provider, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time) *DNSController {
-    return &DNSController{
+func NewDNSController(dnsProvider dns.Provider, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time, intervals *DNSControllerIntervalOpts) *DNSController {
+    ctrl := &DNSController{
         dnsProvider:                    dnsProvider,
         updates:                        updates,
         wantedLBsLock:                  sync.RWMutex{},
@@ -49,6 +55,13 @@ func NewDNSController(dnsProvider dns.Provider, updates chan *LoadbalancerList, 
         metrics:                        metrics,
         lastCycle:                      lastCycle,
     }
+
+    if intervals != nil {
+        ctrl.syncInterval = intervals.Sync
+        ctrl.currentZoneSyncEnforceInterval = intervals.CurrentZoneSyncEnforce
+    }
+
+    return ctrl
 }
 
 func (c *DNSController) updateCurrentZones() error {
@@ -182,7 +195,9 @@ func (c *DNSController) lbUpdateLoop() {
                 continue
             }
 
-            c.metrics.LBUpdatesTotal.Inc()
+            if c.metrics != nil {
+                c.metrics.LBUpdatesTotal.Inc()
+            }
 
             logrus.Debugf("received new wantedLBsCandidate (%d)", newLBs.Hash)
             c.wantedLBsLock.Lock()
@@ -206,8 +221,10 @@ func (c *DNSController) sync(force bool) {
     if force || c.currentZonesEnforceSync || timeSinceLastCurrentZoneSync > c.currentZoneSyncEnforceInterval {
         err := c.updateCurrentZones()
         if err != nil {
-            c.metrics.ErrorsTotal.Inc()
-            c.metrics.ErrorsDNS.Inc()
+            if c.metrics != nil {
+                c.metrics.ErrorsTotal.Inc()
+                c.metrics.ErrorsDNS.Inc()
+            }
 
             logrus.WithFields(logrus.Fields{
                 "detail":                       err,
@@ -224,8 +241,10 @@ func (c *DNSController) sync(force bool) {
 
         err := c.updateWantedZones()
         if err != nil {
-            c.metrics.ErrorsTotal.Inc()
-            c.metrics.ErrorsDNS.Inc()
+            if c.metrics != nil {
+                c.metrics.ErrorsTotal.Inc()
+                c.metrics.ErrorsDNS.Inc()
+            }
 
             logrus.WithFields(logrus.Fields{
                 "detail": err,
@@ -252,11 +271,17 @@ func (c *DNSController) sync(force bool) {
             logrus.Debugf("updating zone `%v` since it changed (cur: %d new: %d)", z, curHash, newHash)
             err := c.dnsProvider.UpdateZone(*z)
             if err != nil {
-                c.metrics.ErrorsTotal.Inc()
-                c.metrics.ErrorsDNS.Inc()
+                if c.metrics != nil {
+                    c.metrics.ErrorsTotal.Inc()
+                    c.metrics.ErrorsDNS.Inc()
+                }
+
                 logrus.Errorf("couldn't update zone `%s`, see: %v", z.Name, err)
             } else {
-                c.metrics.DNSZoneUpdates.WithLabelValues(z.Name).Inc()
+                if c.metrics != nil {
+                    c.metrics.DNSZoneUpdates.WithLabelValues(z.Name).Inc()
+                }
+
                 logrus.Infof("updated zone `%s`", z.Name)
                 c.currentZonesEnforceSync = true
             }
@@ -321,7 +346,10 @@ func (c *DNSController) Run() {
 
                 duration := time.Since(now)
                 logrus.Debugf("finished dns sync, it took %s", duration.String())
-                c.metrics.DNSSyncTime.Observe(duration.Seconds() * 1e3)
+
+                if c.metrics != nil {
+                    c.metrics.DNSSyncTime.Observe(duration.Seconds() * 1e3)
+                }
 
                 time.Sleep(c.syncInterval)
             }

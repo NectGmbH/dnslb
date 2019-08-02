@@ -31,6 +31,14 @@ type Loadbalancer struct {
     Endpoints []EndpointProtocol
 }
 
+// NewLoadbalancer creates a new dns loadbalancer with the specified healthchecked endpoints
+func NewLoadbalancer(name string, endpoints ...EndpointProtocol) Loadbalancer {
+    return Loadbalancer{
+        Name:      name,
+        Endpoints: endpoints,
+    }
+}
+
 func (lb Loadbalancer) String() string {
     return fmt.Sprintf("%s %v", lb.Name, lb.Endpoints)
 }

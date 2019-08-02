@@ -8,7 +8,10 @@ build:
 build-linux:
 	GOOS=linux go build -ldflags $(BUILD_FLAGS)
 
-docker-build: build-linux
+docker-test:
+	go test -v 
+
+docker-build: build-linux docker-test
 	docker build -t $(IMAGE) .
 
 docker-push: docker-build

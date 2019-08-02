@@ -150,13 +150,10 @@ func main() {
     }
 
     etcdCycleCh := make(chan time.Time, 0)
-    etcdCtrl, err := NewETCDController(agents, etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh)
-    if err != nil {
-        logrus.Fatalf("couldn't set up etcd controller, see: %v", err)
-    }
+    etcdCtrl := NewETCDController(agents, etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
 
     dnsCycleCh := make(chan time.Time, 0)
-    dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh)
+    dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, nil)
 
     // - Setup health checking -------------------------------------------------
     var isLeadingA int64
