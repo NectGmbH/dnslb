@@ -143,8 +143,14 @@ func main() {
 
     lbUpdates := make(chan *LoadbalancerList, 0)
 
+    etcd := &ETCD{}
+    err = etcd.Init(etcds)
+    if err != nil {
+        logrus.Fatalf("couldn't connect to etcds `%+v`, see: %v", etcds, err)
+    }
+
     etcdCycleCh := make(chan time.Time, 0)
-    etcdCtrl, err := NewETCDController(agents, etcds, loadbalancers, lbUpdates, metrics, etcdCycleCh)
+    etcdCtrl, err := NewETCDController(agents, etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh)
     if err != nil {
         logrus.Fatalf("couldn't set up etcd controller, see: %v", err)
     }

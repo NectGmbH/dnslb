@@ -1,7 +1,6 @@
 package main
 
 import (
-    "context"
     "encoding/json"
     "fmt"
     "io"
@@ -11,7 +10,6 @@ import (
     "github.com/NectGmbH/health"
     "github.com/OneOfOne/xxhash"
     "github.com/sirupsen/logrus"
-    etcdClient "go.etcd.io/etcd/client"
 )
 
 // ETCDController represents a controller which checks the upstream etcd health statuses and updated the local state
@@ -26,16 +24,16 @@ type ETCDController struct {
     statusStopCh       chan struct{}
     monitorLoopStarted bool
     statusLoopStarted  bool
-    client             etcdClient.Client
     statusInterval     time.Duration
     monitorInterval    time.Duration
     maxStatusAge       time.Duration
     running            bool
     lastCycle          chan time.Time
+    etcd               ETCDProvider
 }
 
 // NewETCDController creates a new controller
-func NewETCDController(agents []string, etcds []string, wantedLBs []Loadbalancer, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time) (*ETCDController, error) {
+func NewETCDController(agents []string, etcd ETCDProvider, wantedLBs []Loadbalancer, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time) (*ETCDController, error) {
     ctrl := &ETCDController{
         wanted:          wantedLBs,
         updates:         updates,
@@ -45,14 +43,7 @@ func NewETCDController(agents []string, etcds []string, wantedLBs []Loadbalancer
         maxStatusAge:    45 * time.Second,
         metrics:         metrics,
         lastCycle:       lastCycle,
-    }
-
-    var err error
-    ctrl.client, err = etcdClient.New(etcdClient.Config{
-        Endpoints: etcds,
-    })
-    if err != nil {
-        return nil, fmt.Errorf("couldn't connect to etcds `%+v`, see: %v", etcds, err)
+        etcd:            etcd,
     }
 
     return ctrl, nil
@@ -209,19 +200,10 @@ func (c *ETCDController) syncStatus() error {
 }
 
 func (c *ETCDController) getStatusFromAgent(agent string) ([]health.HealthCheckStatus, error) {
-    kapi := etcdClient.NewKeysAPI(c.client)
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    resp, err := kapi.Get(ctx, agent, nil)
-    cancel()
+    val, err := c.etcd.Get(agent)
     if err != nil {
         return nil, fmt.Errorf("couldn't retrieve status for agent `%s` from etcd, see: %v", agent, err)
     }
-
-    if resp == nil || resp.Node == nil {
-        return nil, fmt.Errorf("missing node in response from etcd for agent `%s`", agent)
-    }
-
-    val := resp.Node.Value
 
     var status struct {
         Status []health.HealthCheckStatus
@@ -301,17 +283,12 @@ func (c *ETCDController) syncMonitors() error {
     h := xxhash.New64()
 
     // - Get monitors from etcd ------------------------------------------------
-    kapi := etcdClient.NewKeysAPI(c.client)
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    resp, err := kapi.Get(ctx, "monitors", nil)
-    cancel()
+    value, err := c.etcd.Get("monitors")
     if err != nil {
         logrus.Errorf("couldn't retrieve monitors from etcd, see: %v", err)
-    } else if resp == nil || resp.Node == nil {
-        logrus.Errorf("missing node in response from etcd")
     } else {
         // - Get hash & compare to see if we need to do anything -------------------
-        remoteMonitors := resp.Node.Value
+        remoteMonitors := value
 
         reader := strings.NewReader(remoteMonitors)
         io.Copy(h, reader)
@@ -329,9 +306,7 @@ func (c *ETCDController) syncMonitors() error {
         return fmt.Errorf("couldn't form wanted monitors string, see: %v", err)
     }
 
-    ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-    _, err = kapi.Set(ctx, "monitors", localMonitors, nil)
-    cancel()
+    err = c.etcd.Set("monitors", localMonitors)
     if err != nil {
         return fmt.Errorf("couldn't update monitors in etcd, see: %v", err)
     }
