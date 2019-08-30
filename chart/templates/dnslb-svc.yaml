@@ -3,11 +3,11 @@ kind: Service
 metadata:
   name: dnslb
   labels:
-    app: dnslb
+    name: dnslb
 spec:
   ports:
   - port: 8080
     name: web
   clusterIP: None
   selector:
-    app: dnslb
+    name: dnslb

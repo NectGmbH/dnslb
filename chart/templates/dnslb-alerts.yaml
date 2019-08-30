@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: loadbalancing.rules
+spec:
+  groups:
+  - name: loadbalancing-general.rules
+    rules:
+    - alert: DCDown
+      annotations:
+        message: '{{ $value }} datacenter(s) for loadbalancer {{ $labels.lb }} are down.'
+      expr: count(etcdcontroller_lb_unhealthy_endpoints) BY (lb) > 0
+      for: 1m
+      labels:
+        severity: error
+    - alert: LBNotEnoughNodes
+      annotations:
+        message: 'only {{ $value }} nodes are serving loadbalancer {{ $labels.lb }}.'
+      expr: sum(general_lb_healthy_endpoints) by (lb) < 3
+      for: 1m
+      labels:
+        severity: warning
