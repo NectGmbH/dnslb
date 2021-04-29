@@ -5,6 +5,8 @@ github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-8c783ffac8f5
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-8c783ffac8f52e60712b0ac760d18f916f24712f/go.mod h1:nBUXSEztuQoZr+28JEkE4T55An+eWvGNRQUMFucgIEA=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-d00dd94a9cb7 h1:Z/pZKo+EZ5Fe8GkUzkYA3NxQpooOQi4/gJXVg8qWNBg=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-d00dd94a9cb7/go.mod h1:fYRUY0E16vCfvP16YJFGSAbr3InvLTX2Mirv+txyOPI=
+github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190722150319-8c783ffac8f5 h1:7xRAc51wrXIJkciBoHurjsZgyyFSr1+ssByyakZbhpE=
+github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190722150319-8c783ffac8f5/go.mod h1:nBUXSEztuQoZr+28JEkE4T55An+eWvGNRQUMFucgIEA=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-6dcd779875d31531c389d66f77d47eda7d00b36e/go.mod h1:zw13XaMa4XkiSS2GD1t1Yk892vGGvDVMq2E4WNDDgBU=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-8c783ffac8f52e60712b0ac760d18f916f24712f/go.mod h1:zw13XaMa4XkiSS2GD1t1Yk892vGGvDVMq2E4WNDDgBU=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-d00dd94a9cb7 h1:UMgEQ1qGvq6oW92dUxrH+6ag/nrNBzM1nWh3aiAwlao=
