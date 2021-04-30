@@ -110,9 +110,9 @@ type SOA struct {
 
 // Zone represents a DNS Zone
 type Zone struct {
-    Name    string
-    Records []Record
-    SOA     SOA
+    Name    string   `yaml:"Name"`
+    Records []Record `yaml:"Records"`
+    SOA     SOA      `yaml:"SOA"`
 }
 
 func (z Zone) String() string {
@@ -271,12 +271,12 @@ func NewZone(name string, records []Record) *Zone {
 
 // Record represents a dns zone record
 type Record struct {
-    Class      Class
-    Name       string
-    TTL        int64
-    Type       RecordType
-    Value      string
-    Preference int64
+    Class      Class      `yaml:"Class"`
+    Name       string     `yaml:"Name"`
+    TTL        int64      `yaml:"TTL"`
+    Type       RecordType `yaml:"Type"`
+    Value      string     `yaml:"Value"`
+    Preference int64      `yaml:"Preference"`
 }
 
 func (r Record) String() string {
