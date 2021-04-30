@@ -53,6 +53,8 @@ github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435 h1:3dAZShp1N516tQnKiT
 github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435/go.mod h1:1FgQYQiOCTyCYF71Y8VOhh0d6xgtQXJjr8F0siy9JSU=
 github.com/NectGmbH/dns v0.0.0-20210430101248-91d552bd430d h1:/XeBbAjyoOsBegBi0eSpzRRzfSjcbUeUaUSTpobXiqg=
 github.com/NectGmbH/dns v0.0.0-20210430101248-91d552bd430d/go.mod h1:6MKfCPwyZT+zJPCb/5Rf5gGmbEp3Uxzpaj+eZX33f6E=
+github.com/NectGmbH/dns v0.0.0-20210430124002-d803a4da61f2 h1:tG2QaZc34ozJHCUTjU7fNnpyo8OwJhGYYAFWrqYdfVY=
+github.com/NectGmbH/dns v0.0.0-20210430124002-d803a4da61f2/go.mod h1:6MKfCPwyZT+zJPCb/5Rf5gGmbEp3Uxzpaj+eZX33f6E=
 github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1 h1:bt9MPhwLvL08GNyDe7mtafAQkq0LQw7AzBrsnhpeEVE=
 github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1/go.mod h1:BtNyEjnaU0wH3jjv/+Z1Yen59BVLMidvzTyJuUm7eFw=
 github.com/NectGmbH/health v0.0.0-20210426094827-f2591eccf724 h1:7iGl5KPpWW5uQVEgXW5In/BsBnJspJCW/WOWYRHEst8=

@@ -5,7 +5,7 @@ go 1.12
 require github.com/sirupsen/logrus v1.6.0
 
 require (
-	github.com/NectGmbH/dns v0.0.0-20210430101248-91d552bd430d
+	github.com/NectGmbH/dns v0.0.0-20210430124002-d803a4da61f2
 	github.com/NectGmbH/health v0.0.0-20210426094827-f2591eccf724
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/coreos/etcd v3.3.25+incompatible // indirect

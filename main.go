@@ -157,6 +157,10 @@ func main() {
             }).Fatal("couldn't unmarshal mock znes")
         }
 
+        for _, z := range zones {
+            logrus.WithField("zone", z.String()).Debug("Got mock zone seed")
+        }
+
         dnsProvider = mockdns.NewProvider(zones)
     }
 
