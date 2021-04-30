@@ -3,6 +3,7 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-8c783ffac8f52e60712b0ac760d18f916f24712f h1:s6U3TooCKkAxmTECdxHJCYEE9QVZf8jKY7x5+WGdD3s=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-8c783ffac8f52e60712b0ac760d18f916f24712f/go.mod h1:nBUXSEztuQoZr+28JEkE4T55An+eWvGNRQUMFucgIEA=
+github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190722150319-8c783ffac8f5 h1:7xRAc51wrXIJkciBoHurjsZgyyFSr1+ssByyakZbhpE=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190722150319-8c783ffac8f5/go.mod h1:nBUXSEztuQoZr+28JEkE4T55An+eWvGNRQUMFucgIEA=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-d00dd94a9cb7 h1:UMgEQ1qGvq6oW92dUxrH+6ag/nrNBzM1nWh3aiAwlao=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-d00dd94a9cb7/go.mod h1:NHwgyIn2RIez88n+HJtiNp20/BHXaTcTxTGkjhaRwjk=
