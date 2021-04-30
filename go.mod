@@ -5,9 +5,9 @@ go 1.12
 require github.com/sirupsen/logrus v1.4.2
 
 require (
-	github.com/NectGmbH/dns v0.0.0-20190802131953-99e74d99d1fd
+	github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435
 	github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1
-	github.com/OneOfOne/xxhash v1.2.5
+	github.com/OneOfOne/xxhash v1.2.8
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/etcd v3.3.13+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect

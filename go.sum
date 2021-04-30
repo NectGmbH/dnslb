@@ -3,6 +3,7 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-8c783ffac8f52e60712b0ac760d18f916f24712f h1:s6U3TooCKkAxmTECdxHJCYEE9QVZf8jKY7x5+WGdD3s=
 github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190718115733-8c783ffac8f52e60712b0ac760d18f916f24712f/go.mod h1:nBUXSEztuQoZr+28JEkE4T55An+eWvGNRQUMFucgIEA=
+github.com/NectGmbH/autodns/client/zone_tasks v0.0.0-20190722150319-8c783ffac8f5/go.mod h1:nBUXSEztuQoZr+28JEkE4T55An+eWvGNRQUMFucgIEA=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-d00dd94a9cb7 h1:UMgEQ1qGvq6oW92dUxrH+6ag/nrNBzM1nWh3aiAwlao=
 github.com/NectGmbH/autodns/models v0.0.0-20190718115733-d00dd94a9cb7/go.mod h1:NHwgyIn2RIez88n+HJtiNp20/BHXaTcTxTGkjhaRwjk=
 github.com/NectGmbH/dns v0.0.0-20190801155302-969f9fa13940 h1:8sPYiCZPH9yR75czdss9CsSFQ+15cDskUea78+nqX64=
@@ -11,10 +12,14 @@ github.com/NectGmbH/dns v0.0.0-20190801163744-46d253a29869 h1:60zCCkAunzZ7SrlVci
 github.com/NectGmbH/dns v0.0.0-20190801163744-46d253a29869/go.mod h1:nLDT4NYL7Av+HafcAsoVRp4tEYdlnW0NmJbL1TanlCc=
 github.com/NectGmbH/dns v0.0.0-20190802131953-99e74d99d1fd h1:GSV8UNqAN4R7DH1odS5+O427mlT4BmxwusHWDxoXYEg=
 github.com/NectGmbH/dns v0.0.0-20190802131953-99e74d99d1fd/go.mod h1:nLDT4NYL7Av+HafcAsoVRp4tEYdlnW0NmJbL1TanlCc=
+github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435 h1:3dAZShp1N516tQnKiTNiaUq2PMG35W+8rx0rPX0/Vkg=
+github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435/go.mod h1:1FgQYQiOCTyCYF71Y8VOhh0d6xgtQXJjr8F0siy9JSU=
 github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1 h1:bt9MPhwLvL08GNyDe7mtafAQkq0LQw7AzBrsnhpeEVE=
 github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1/go.mod h1:BtNyEjnaU0wH3jjv/+Z1Yen59BVLMidvzTyJuUm7eFw=
 github.com/OneOfOne/xxhash v1.2.5 h1:zl/OfRA6nftbBK9qTohYBJ5xvw6C/oNKizR7cZGl3cI=
 github.com/OneOfOne/xxhash v1.2.5/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
+github.com/OneOfOne/xxhash v1.2.8 h1:31czK/TI9sNkxIKfaUfGlU47BAxQ0ztGgd9vPyqimf8=
+github.com/OneOfOne/xxhash v1.2.8/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=
@@ -161,6 +166,7 @@ github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7V
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
+github.com/konsorten/go-windows-terminal-sequences v1.0.1 h1:mweAR1A6xJ3oS2pRaGiHgQ4OO8tzTaLawm8vnODuwDk=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
@@ -306,6 +312,7 @@ golang.org/x/tools v0.0.0-20190311212946-11955173bddd/go.mod h1:LCzVGOaR6xXOjkQ3
 golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135/go.mod h1:RgjU9mgBXZiqYHBnxXauZ1Gv1EHHAz9KjViQ78xBX0Q=
 golang.org/x/tools v0.0.0-20190614205625-5aca471b1d59/go.mod h1:/rFqwRUd4F7ZHNgwSSTFct+R/Kf4OFW1sUzUTQQTgfc=
 golang.org/x/tools v0.0.0-20190617190820-da514acc4774/go.mod h1:/rFqwRUd4F7ZHNgwSSTFct+R/Kf4OFW1sUzUTQQTgfc=
+google.golang.org/appengine v1.1.0 h1:igQkv0AAhEIvTEpD5LIpAfav2eeVO9HBTjvKHVJPRSs=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8 h1:Nw54tB0rB7hY/N0NQvRW8DG4Yk3Q6T9cu9RcFQDu1tc=
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
