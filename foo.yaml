@@ -1,0 +1,16 @@
+- Name: someZone
+  SOA:
+    MName: mname
+    RName: rname
+    Serial: 2020010101
+    Refresh: 60
+    Retry: 60
+    Expire: 60
+    TTL: 60
+  Records:
+  - Class: IN
+    Name: foo
+    TTL: 60
+    Type: A
+    Value: '127.0.0.1'
+    Preference: 1

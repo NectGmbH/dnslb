@@ -160,6 +160,10 @@ func main() {
         dnsProvider = mockdns.NewProvider(zones)
     }
 
+    if debug {
+        dnsProvider = NewDebugDNSProvider(dnsProvider)
+    }
+
     // - Setup Controllers -----------------------------------------------------
     metrics := &Metrics{}
     err := metrics.Init()
