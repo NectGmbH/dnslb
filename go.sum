@@ -15,6 +15,7 @@ github.com/NectGmbH/dns v0.0.0-20190802131953-99e74d99d1fd h1:GSV8UNqAN4R7DH1odS
 github.com/NectGmbH/dns v0.0.0-20190802131953-99e74d99d1fd/go.mod h1:nLDT4NYL7Av+HafcAsoVRp4tEYdlnW0NmJbL1TanlCc=
 github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435 h1:3dAZShp1N516tQnKiTNiaUq2PMG35W+8rx0rPX0/Vkg=
 github.com/NectGmbH/dns v0.0.0-20210429123626-bd83cce0d435/go.mod h1:1FgQYQiOCTyCYF71Y8VOhh0d6xgtQXJjr8F0siy9JSU=
+github.com/NectGmbH/dns v0.0.0-20210430101248-91d552bd430d h1:/XeBbAjyoOsBegBi0eSpzRRzfSjcbUeUaUSTpobXiqg=
 github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1 h1:bt9MPhwLvL08GNyDe7mtafAQkq0LQw7AzBrsnhpeEVE=
 github.com/NectGmbH/health v0.0.0-20190712123504-e59c70a573e1/go.mod h1:BtNyEjnaU0wH3jjv/+Z1Yen59BVLMidvzTyJuUm7eFw=
 github.com/OneOfOne/xxhash v1.2.5 h1:zl/OfRA6nftbBK9qTohYBJ5xvw6C/oNKizR7cZGl3cI=

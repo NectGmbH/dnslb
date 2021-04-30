@@ -3,6 +3,7 @@ package main
 import (
     "context"
     "fmt"
+    "io/ioutil"
     "net/http"
     "net/http/httputil"
     "os"
@@ -14,6 +15,9 @@ import (
 
     "github.com/NectGmbH/dns"
     "github.com/NectGmbH/dns/provider/autodns"
+    mockdns "github.com/NectGmbH/dns/provider/mock"
+
+    "gopkg.in/yaml.v3"
 
     "github.com/motemen/go-loghttp"
     "github.com/namsral/flag"
@@ -30,10 +34,12 @@ import (
 
 // ProviderNameAutoDNS is the name of the autodns provider
 const ProviderNameAutoDNS = "autodns"
+const ProviderNameMock = "mock"
 
 // ProviderNames contains a list of all valid provider names.
 var ProviderNames = []string{
     ProviderNameAutoDNS,
+    ProviderNameMock,
 }
 
 func main() {
@@ -74,6 +80,10 @@ func main() {
     flag.StringVar(&autoDNSUsername, "autodns-username", "", "username to auth against autodns")
     flag.StringVar(&autoDNSPassword, "autodns-password", "", "password to auth against autodns")
 
+    // - Parsing: Mocked DNS ---------------------------------------------------
+    var mockZonePath string
+    flag.StringVar(&mockZonePath, "mock-file", "", "file containing yaml encoded []dns.Zone")
+
     flag.Parse()
 
     // - Validation: General ---------------------------------------------------
@@ -111,6 +121,13 @@ func main() {
         }
     }
 
+    // - Validation: MockDNS ---------------------------------------------------
+    if provider == ProviderNameMock {
+        if mockZonePath == "" {
+            logrus.Fatalf("missing -mock-file parameter")
+        }
+    }
+
     // - Setup Debugging -------------------------------------------------------
     if debug {
         logrus.SetLevel(logrus.DebugLevel)
@@ -122,6 +139,25 @@ func main() {
     var dnsProvider dns.Provider
     if provider == ProviderNameAutoDNS {
         dnsProvider = autodns.NewProvider(autoDNSUsername, autoDNSPassword)
+    } else if provider == ProviderNameMock {
+        mockBuf, err := ioutil.ReadFile(mockZonePath)
+        if err != nil {
+            logrus.WithFields(logrus.Fields{
+                "path":   mockZonePath,
+                "reason": err,
+            }).Fatal("couldn't read mock znes")
+        }
+
+        var zones []dns.Zone
+        err = yaml.Unmarshal(mockBuf, &zones)
+        if err != nil {
+            logrus.WithFields(logrus.Fields{
+                "path":   mockZonePath,
+                "reason": err,
+            }).Fatal("couldn't unmarshal mock znes")
+        }
+
+        dnsProvider = mockdns.NewProvider(zones)
     }
 
     // - Setup Controllers -----------------------------------------------------
