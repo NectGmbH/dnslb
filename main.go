@@ -49,6 +49,22 @@ var ProviderNames = []string{
 	ProviderNameMockSerialize,
 }
 
+// LeaderElectionImplementationSingleton contains a list of all valid leader eletion implementations.
+const LeaderElectionImplementationSingleton = "singleton"
+
+// LeaderElectionImplementationK8s contains a list of all valid leader eletion implementations.
+const LeaderElectionImplementationK8s = "k8s"
+
+// LeaderElectionImplementationRaft for internalraft leader election implementations.
+const LeaderElectionImplementationRaft = "raft"
+
+// LeaderElectionImplementation contains a list of all valid leader election implementations.
+var LeaderElectionImplementation = []string{
+	LeaderElectionImplementationSingleton,
+	LeaderElectionImplementationK8s,
+	LeaderElectionImplementationRaft,
+}
+
 func main() {
 	// - Parsing: General ------------------------------------------------------
 	var port int
@@ -57,6 +73,7 @@ func main() {
 	var agents StringSlice
 	var etcds StringSlice
 	var provider string
+	var election string
 	var jsonLogging bool
 	lbs := make(StringMap)
 
@@ -65,23 +82,30 @@ func main() {
 	flag.Var(&lbs, "lb", "Loadbalancers to use in the format dnsrecord=ip1,ip2. Multiple can be given, e.g.: -lb test.nect.com=http://50.0.0.1:80,tcp://75.0.0.1:443")
 	flag.Var(&etcds, "etcd", "etcd endpoint where status should be persisted. Multiple can be given, e.g.: -etcd localhost:2379 -etcd localhost:22379")
 	flag.StringVar(&provider, "provider", "", fmt.Sprintf("name of the provider, currently supported: %+v", ProviderNames))
+	flag.StringVar(&election, "election", "", fmt.Sprintf("name of the election implementations, currently supported: %+v", LeaderElectionImplementation))
 	flag.BoolVar(&dumpHTTP, "dump-http", false, "flag indicating whether all http requests and responses should be dumped")
 	flag.BoolVar(&debug, "debug", false, "flag indicating whether debug output should be written")
 	flag.BoolVar(&jsonLogging, "json-logging", false, "Always use JSON logging")
 
 	// - Parsing: Kubernetes ---------------------------------------------------
-	var k8s bool
-	var id string
+	var instanceID string
 	var kubeconfig string
 	var leaseLockName string
 	var leaseLockNamespace string
 	hostname, _ := os.Hostname()
 
-	flag.BoolVar(&k8s, "k8s", true, "flag indicating whether we'll be running in a k8s cluster(=true) or as standalone(=false)")
-	flag.StringVar(&id, "k8s-id", hostname, "instance id for leaderelection. should be unique per instance.")
+	flag.StringVar(&instanceID, "instance-id", hostname, "instance id for leaderelection. should be unique per instance.")
 	flag.StringVar(&kubeconfig, "k8s-kubeconfig", "", "absolut path to the kubeconfig file. Only needed when run outside the cluster. Only needed when -k8s is given")
 	flag.StringVar(&leaseLockName, "k8s-lock-name", "dnslb", "the lease lock resource name. Only needed when -k8s is given")
 	flag.StringVar(&leaseLockNamespace, "k8s-lock-namespace", "", "the lease lock resource namespace. Only needed when -k8s is given")
+
+	// - Parsing: Raft ---------------------------------------------------
+	var raftAddress string
+	var raftDir string
+	var raftBootstrap bool
+	flag.StringVar(&raftAddress, "raft-address", "", "json encoded []dns.Zone and updates counter")
+	flag.StringVar(&raftDir, "raft-dir", "", "json encoded []dns.Zone and updates counter")
+	flag.BoolVar(&raftBootstrap, "raft-bootstrap", false, "bootstrap the raft cluster")
 
 	// - Parsing: AutoDNS ------------------------------------------------------
 	var autoDNSUsername string
@@ -95,6 +119,7 @@ func main() {
 	// - Parsing: Mocked DNS ---------------------------------------------------
 	var mockZoneStatePath string
 	flag.StringVar(&mockZoneStatePath, "mock-file-state", "", "json encoded []dns.Zone and updates counter")
+
 	flag.Parse()
 
 	if jsonLogging == true {
@@ -110,10 +135,11 @@ func main() {
 		logrus.Fatal("no etcds given, pass them using -etcd")
 	}
 
-	// - Validation: Kubernetes ------------------------------------------------
-	if k8s {
-		if id == "" {
-			logrus.Fatalf("no instance id specified, pass it using -k8s-id")
+	switch election {
+	case LeaderElectionImplementationSingleton:
+	case LeaderElectionImplementationK8s:
+		if instanceID == "" {
+			logrus.Fatalf("no instance id specified, pass it using -instance-id")
 		}
 
 		if leaseLockName == "" {
@@ -123,6 +149,18 @@ func main() {
 		if leaseLockNamespace == "" {
 			logrus.Fatalf("no lock namespace specified, pass it using -k8s-lock-namespace")
 		}
+	case LeaderElectionImplementationRaft:
+		if instanceID == "" {
+			logrus.Fatalf("no instance id specified, pass it using -instance-id")
+		}
+		if raftAddress == "" {
+			logrus.Fatalf("no raft-address specified, pass it using -raft-address")
+		}
+		if raftDir == "" {
+			logrus.Fatalf("no raft-dir id specified, pass it using -raft-dir")
+		}
+	default:
+		logrus.Fatalf("unknown election `%s`, expected one of these: %v", election, LeaderElectionImplementation)
 	}
 
 	// - Validation: AutoDNS ---------------------------------------------------
@@ -148,7 +186,7 @@ func main() {
 			logrus.Fatalf("missing -mock-file parameter")
 		}
 		if mockZoneStatePath == "" {
-			logrus.Fatalf("missing -mock-file parameter")
+			logrus.Fatalf("missing -mock-file-state parameter")
 		}
 	}
 
@@ -300,8 +338,8 @@ func main() {
 
 	// - Setup Leaderelection / start ------------------------------------------
 	signalCh := make(chan os.Signal, 1)
-
-	if k8s {
+	switch election {
+	case LeaderElectionImplementationK8s:
 		config, err := buildKubeconfig(kubeconfig)
 		if err != nil {
 			logrus.Fatalf("couldn't build kubeconfig, see: %v", err)
@@ -318,7 +356,7 @@ func main() {
 			},
 			Client: kubeclient.CoordinationV1(),
 			LockConfig: resourcelock.ResourceLockConfig{
-				Identity: id,
+				Identity: instanceID,
 			},
 		}
 
@@ -348,7 +386,7 @@ func main() {
 			Callbacks: leaderelection.LeaderCallbacks{
 				OnStartedLeading: func(ctx context.Context) {
 					atomic.SwapInt64(&isLeadingA, 1)
-					logrus.WithFields(logrus.Fields{"leader": id}).Info("leaderelection: started leading")
+					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: started leading")
 
 					logrus.Infof("starting controllers")
 					etcdCtrl.Run()
@@ -358,14 +396,14 @@ func main() {
 				OnStoppedLeading: func() {
 					atomic.SwapInt64(&isLeadingA, 0)
 					atomic.SwapInt64(&leadingStoppedAtTS, time.Now().Unix())
-					logrus.WithFields(logrus.Fields{"leader": id}).Info("leaderelection: stopped leading")
+					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: stopped leading")
 
 					logrus.Infof("stopping controllers")
 					dnsCtrl.Stop()
 					etcdCtrl.Stop()
 				},
 				OnNewLeader: func(identity string) {
-					if identity == id {
+					if identity == instanceID {
 						return
 					}
 
@@ -377,9 +415,9 @@ func main() {
 		// because the context is closed, the client should report errors
 		_, err = kubeclient.CoordinationV1().Leases(leaseLockNamespace).Get(leaseLockName, metav1.GetOptions{})
 		if err == nil || !strings.Contains(err.Error(), "the leader is shutting down") {
-			logrus.Fatalf("leaderelection: %s: expected to get an error when trying to make a client call: %v", id, err)
+			logrus.Fatalf("leaderelection: %s: expected to get an error when trying to make a client call: %v", instanceID, err)
 		}
-	} else {
+	case LeaderElectionImplementationSingleton:
 		etcdCtrl.Run()
 		dnsCtrl.Run()
 
@@ -392,6 +430,44 @@ func main() {
 		etcdCtrl.Stop()
 
 		logrus.Info("controller stopped")
+	case LeaderElectionImplementationRaft:
+		logrus.Info("raft setup")
+		raft, err := raftSetup(raftAddress, instanceID, raftDir, raftBootstrap)
+		if err != nil {
+			logrus.Fatalf("failed to start raft: %v", err)
+		}
+		go func() {
+			for {
+				leading := <-raft.LeaderCh()
+				if leading {
+					atomic.SwapInt64(&isLeadingA, 1)
+					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: started leading")
+
+					logrus.Infof("starting controllers")
+					etcdCtrl.Run()
+					dnsCtrl.Run()
+				} else {
+					atomic.SwapInt64(&isLeadingA, 0)
+					atomic.SwapInt64(&leadingStoppedAtTS, time.Now().Unix())
+					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: stopped leading")
+
+					logrus.Infof("stopping controllers")
+					dnsCtrl.Stop()
+					etcdCtrl.Stop()
+				}
+			}
+		}()
+
+		etcdCtrl.Run()
+		dnsCtrl.Run()
+
+		logrus.Info("controller started")
+
+		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+		<-signalCh
+		logrus.Info("Received ^C, shutting down...")
+		dnsCtrl.Stop()
+		etcdCtrl.Stop()
 	}
 }
 
