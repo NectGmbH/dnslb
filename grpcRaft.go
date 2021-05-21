@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -21,16 +20,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var (
-	myAddr = flag.String("address", "localhost:50051", "TCP host+port for this node")
-	raftID = flag.String("raft_id", "", "Node id used by Raft")
-
-	raftDir       = flag.String("raft_data_dir", "data/", "Raft data dir")
-	raftBootstrap = flag.Bool("raft_bootstrap", false, "Whether to bootstrap the Raft cluster")
-)
-
-func raftSetup(myAddr string, raftID string, raftDir string, raftBootstrap bool) {
-	flag.Parse()
+func raftSetup(myAddr string, raftID string, raftDir string, raftBootstrap bool) (*raft.Raft, error) {
 
 	ctx := context.Background()
 	_, port, err := net.SplitHostPort(myAddr)
@@ -44,7 +34,7 @@ func raftSetup(myAddr string, raftID string, raftDir string, raftBootstrap bool)
 
 	wt := &replicatedState{}
 
-	r, tm, err := newRaft(ctx, raftID, myAddr, wt)
+	r, tm, err := newRaft(ctx, raftID, myAddr, wt, raftDir, raftBootstrap)
 	if err != nil {
 		log.Fatalf("failed to start raft: %v", err)
 	}
@@ -53,22 +43,17 @@ func raftSetup(myAddr string, raftID string, raftDir string, raftBootstrap bool)
 	leaderhealth.Setup(r, s, []string{"Example"})
 	raftadmin.Register(s, r)
 	reflection.Register(s)
-	go func() {
-		for {
-			msg := <-r.LeaderCh()
-			log.Printf("is leader %t\n", msg)
-		}
-	}()
 	if err := s.Serve(sock); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+	return r, nil
 }
 
-func newRaft(ctx context.Context, myID, myAddress string, fsm raft.FSM) (*raft.Raft, *transport.Manager, error) {
+func newRaft(ctx context.Context, myID, myAddress string, fsm raft.FSM, raftDir string, raftBootstrap bool) (*raft.Raft, *transport.Manager, error) {
 	c := raft.DefaultConfig()
 	c.LocalID = raft.ServerID(myID)
 
-	baseDir := filepath.Join(*raftDir, myID)
+	baseDir := filepath.Join(raftDir, myID)
 
 	ldb, err := boltdb.NewBoltStore(filepath.Join(baseDir, "logs.dat"))
 	if err != nil {
@@ -92,7 +77,7 @@ func newRaft(ctx context.Context, myID, myAddress string, fsm raft.FSM) (*raft.R
 		return nil, nil, fmt.Errorf("raft.NewRaft: %v", err)
 	}
 
-	if *raftBootstrap {
+	if raftBootstrap {
 		cfg := raft.Configuration{
 			Servers: []raft.Server{
 				{
