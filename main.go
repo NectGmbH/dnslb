@@ -432,10 +432,8 @@ func main() {
 		logrus.Info("controller stopped")
 	case LeaderElectionImplementationRaft:
 		logrus.Info("raft setup")
-		raft, err := raftSetup(raftAddress, instanceID, raftDir, raftBootstrap)
-		if err != nil {
-			logrus.Fatalf("failed to start raft: %v", err)
-		}
+		raft := NewRaftController(raftAddress, instanceID, raftDir, raftBootstrap)
+		go raft.Run()
 		go func() {
 			for {
 				leading := <-raft.LeaderCh()
@@ -457,15 +455,9 @@ func main() {
 				}
 			}
 		}()
-
-		etcdCtrl.Run()
-		dnsCtrl.Run()
-
-		logrus.Info("controller started")
-
-		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 		<-signalCh
 		logrus.Info("Received ^C, shutting down...")
+		raft.Stop()
 		dnsCtrl.Stop()
 		etcdCtrl.Stop()
 	}

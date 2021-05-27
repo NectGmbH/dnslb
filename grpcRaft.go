@@ -20,7 +20,17 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func raftSetup(myAddr string, raftID string, raftDir string, raftBootstrap bool) (*raft.Raft, error) {
+// RaftController represents a raft controller
+type RaftController struct {
+	raft             *raft.Raft
+	transportManager *transport.Manager
+	running          bool
+	grpcServer       *grpc.Server
+	socket           *net.Listener
+}
+
+// NewRaftController creates a new controller
+func NewRaftController(myAddr string, raftID string, raftDir string, raftBootstrap bool) *RaftController {
 
 	ctx := context.Background()
 	_, port, err := net.SplitHostPort(myAddr)
@@ -43,10 +53,40 @@ func raftSetup(myAddr string, raftID string, raftDir string, raftBootstrap bool)
 	leaderhealth.Setup(r, s, []string{"Example"})
 	raftadmin.Register(s, r)
 	reflection.Register(s)
-	if err := s.Serve(sock); err != nil {
+
+	ctrl := &RaftController{
+		raft:             r,
+		transportManager: tm,
+		grpcServer:       s,
+		running:          false,
+		socket:           &sock,
+	}
+
+	return ctrl
+
+}
+
+// Run starts the controller in a async, non blocking way
+func (c *RaftController) Run() {
+	if c.running {
+		return
+	}
+	if err := c.grpcServer.Serve(*c.socket); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
-	return r, nil
+}
+
+// Stop the controller in a async, non blocking way
+func (c *RaftController) Stop() {
+	if !c.running {
+		return
+	}
+	c.grpcServer.Stop()
+}
+
+// LeaderCh returns the leader channel.
+func (c *RaftController) LeaderCh() <-chan bool {
+	return c.raft.LeaderCh()
 }
 
 func newRaft(ctx context.Context, myID, myAddress string, fsm raft.FSM, raftDir string, raftBootstrap bool) (*raft.Raft, *transport.Manager, error) {
