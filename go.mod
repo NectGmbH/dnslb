@@ -19,6 +19,7 @@ require (
 	github.com/motemen/go-loghttp v0.0.0-20170804080138-974ac5ceac27
 	github.com/namsral/flag v1.7.4-pre
 	github.com/prometheus/client_golang v1.10.0
+	github.com/timtosi/bully-algorithm v0.0.0-20190221194619-063e99eaf6c5 // indirect
 	go.etcd.io/etcd v3.3.25+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
