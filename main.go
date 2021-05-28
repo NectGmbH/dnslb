@@ -103,8 +103,8 @@ func main() {
 	var raftAddress string
 	var raftDir string
 	var raftBootstrap bool
-	flag.StringVar(&raftAddress, "raft-address", "", "json encoded []dns.Zone and updates counter")
-	flag.StringVar(&raftDir, "raft-dir", "", "json encoded []dns.Zone and updates counter")
+	flag.StringVar(&raftAddress, "raft-address", "", "address to listen for raft requests.")
+	flag.StringVar(&raftDir, "raft-dir", "", "directory to store raft state. Must have subdirectory of the instance id in it.")
 	flag.BoolVar(&raftBootstrap, "raft-bootstrap", false, "bootstrap the raft cluster")
 
 	// - Parsing: AutoDNS ------------------------------------------------------
