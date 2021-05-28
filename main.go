@@ -133,7 +133,7 @@ func main() {
 	var bullyPeers = mapFlags(make(map[string]string))
 	flag.StringVar(&bullyAddress, "bully-address", "", "Address for bully connections")
 	flag.StringVar(&bullyProto, "bully-proto", "tcp4", "Protocol for bully connections")
-	flag.Var(&bullyPeers, "bully-peer", "Peer as 'identifier:address'")
+	flag.Var(&bullyPeers, "bully-peer", "Peer as 'identifier:address'. Can be specified more than once.")
 
 	// - Parsing: AutoDNS ------------------------------------------------------
 	var autoDNSUsername string
@@ -188,14 +188,14 @@ func main() {
 			logrus.Fatalf("no raft-dir id specified, pass it using -raft-dir")
 		}
 	case LeaderElectionImplementationBully:
+		if instanceID == "" {
+			logrus.Fatalf("no instance id specified, pass it using -instance-id")
+		}
 		if bullyAddress == "" {
 			logrus.Fatalf("no bully address specified, pass it using -bully-address")
 		}
-		if raftAddress == "" {
-			logrus.Fatalf("no raft-address specified, pass it using -raft-address")
-		}
-		if raftDir == "" {
-			logrus.Fatalf("no raft-dir id specified, pass it using -raft-dir")
+		if len(bullyPeers) == 0 {
+			logrus.Fatalf("no bully peers specified, pass them all using -bully-address")
 		}
 	default:
 		logrus.Fatalf("unknown election `%s`, expected one of these: %v", election, LeaderElectionImplementation)
