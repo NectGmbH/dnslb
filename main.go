@@ -50,6 +50,7 @@ func main() {
 	var agents StringSlice
 	var etcds StringSlice
 	var provider string
+	var jsonLogging bool
 	lbs := make(StringMap)
 
 	flag.IntVar(&port, "port", 8080, "port for /metrics and /healthz http endpoints")
@@ -59,6 +60,7 @@ func main() {
 	flag.StringVar(&provider, "provider", "", fmt.Sprintf("name of the provider, currently supported: %+v", ProviderNames))
 	flag.BoolVar(&dumpHTTP, "dump-http", false, "flag indicating whether all http requests and responses should be dumped")
 	flag.BoolVar(&debug, "debug", false, "flag indicating whether debug output should be written")
+	flag.BoolVar(&jsonLogging, "json-logging", false, "Always use JSON logging")
 
 	// - Parsing: Kubernetes ---------------------------------------------------
 	var k8s bool
@@ -85,6 +87,10 @@ func main() {
 	flag.StringVar(&mockZonePath, "mock-file", "", "file containing yaml encoded []dns.Zone")
 
 	flag.Parse()
+
+	if jsonLogging == true {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	}
 
 	// - Validation: General ---------------------------------------------------
 	if !strInStrSlice(provider, ProviderNames) {
