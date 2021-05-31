@@ -311,8 +311,7 @@ func (c *DNSController) Run() {
 				close(c.stopCh)
 				logrus.Infof("dns controller stopped.")
 				return
-
-			default:
+			case <-time.After(c.syncInterval):
 				force := false
 
 				// sync wanted lbs if needed so we can access it in a threadsafe way
@@ -332,7 +331,6 @@ func (c *DNSController) Run() {
 
 				if c.wantedLBs == nil {
 					logrus.Infof("still waiting for wantedLBs to get synchronized from etcd")
-					time.Sleep(c.syncInterval)
 					continue
 				}
 
@@ -350,8 +348,6 @@ func (c *DNSController) Run() {
 				if c.metrics != nil {
 					c.metrics.DNSSyncTime.Observe(duration.Seconds() * 1e3)
 				}
-
-				time.Sleep(c.syncInterval)
 			}
 		}
 	})()

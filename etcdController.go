@@ -86,7 +86,7 @@ func (c *ETCDController) statusLoop() {
 			close(c.statusStopCh)
 			logrus.Infof("status loop stopped.")
 			return
-		default:
+		case <-time.After(c.statusInterval):
 			now := time.Now()
 			logrus.Debugf("etcd-controller: started syncing status")
 			err := c.syncStatus()
@@ -106,10 +106,7 @@ func (c *ETCDController) statusLoop() {
 					c.metrics.ETCDSyncTime.Observe(duration.Seconds() * 1e3)
 				}
 			}
-
 			c.lastCycle <- time.Now()
-
-			time.Sleep(c.statusInterval)
 		}
 	}
 }
@@ -263,7 +260,7 @@ func (c *ETCDController) monitorLoop() {
 			close(c.monitorsStopCh)
 			logrus.Infof("monitor loop stopped.")
 			return
-		default:
+		case <-time.After(c.monitorInterval):
 			now := time.Now()
 			logrus.Debugf("etcd-controller: started syncing monitors")
 			err := c.syncMonitors()
@@ -283,8 +280,6 @@ func (c *ETCDController) monitorLoop() {
 					c.metrics.ETCDMonitorSyncTime.Observe(duration.Seconds() * 1e3)
 				}
 			}
-
-			time.Sleep(c.monitorInterval)
 		}
 	}
 }
