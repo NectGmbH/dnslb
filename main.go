@@ -89,8 +89,8 @@ func main() {
 
 	var zoneSyncEnforceIntervalDNSController int
 	var syncIntervalDNSController int
-	flag.IntVar(&zoneSyncEnforceIntervalDNSController, "zone-sync-interval", 45, "DNSController frequency of retrieving current zones from dns provider")
-	flag.IntVar(&syncIntervalDNSController, "zone-sync-interval", 3, "DNSController frequency of uploading to dns provider on change.")
+	flag.IntVar(&zoneSyncEnforceIntervalDNSController, "zone-sync-interval-download", 45, "DNSController frequency of retrieving current zones from dns provider")
+	flag.IntVar(&syncIntervalDNSController, "zone-sync-interval-upload", 3, "DNSController frequency of uploading to dns provider on change.")
 
 	// - Parsing: Kubernetes ---------------------------------------------------
 	var instanceID string
