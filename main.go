@@ -87,6 +87,11 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "flag indicating whether debug output should be written")
 	flag.BoolVar(&jsonLogging, "json-logging", false, "Always use JSON logging")
 
+	var zoneSyncEnforceIntervalDNSController int
+	var syncIntervalDNSController int
+	flag.IntVar(&zoneSyncEnforceIntervalDNSController, "zone-sync-interval", 45, "DNSController frequency of retrieving current zones from dns provider")
+	flag.IntVar(&syncIntervalDNSController, "zone-sync-interval", 3, "DNSController frequency of uploading to dns provider on change.")
+
 	// - Parsing: Kubernetes ---------------------------------------------------
 	var instanceID string
 	var kubeconfig string
@@ -282,7 +287,10 @@ func main() {
 	etcdCtrl := NewETCDController(agents, etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
 
 	dnsCycleCh := make(chan time.Time, 0)
-	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, nil)
+	var DNSControllerSync = time.Duration(syncIntervalDNSController) * time.Second
+	var DNSControllerDownloadSync = time.Duration(syncIntervalDNSController) * time.Second
+
+	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, DNSControllerSync, DNSControllerDownloadSync)
 
 	// - Setup health checking -------------------------------------------------
 	var isLeadingA int64

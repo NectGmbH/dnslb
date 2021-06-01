@@ -12,12 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// DNSControllerIntervalOpts define overrides for the intervals
-type DNSControllerIntervalOpts struct {
-	CurrentZoneSyncEnforce time.Duration
-	Sync                   time.Duration
-}
-
 // DNSController represents a controller which checks the upstream (e.g. autodns) configuration, compares it with the wanted state and does changes
 type DNSController struct {
 	metrics                        *Metrics
@@ -45,22 +39,16 @@ type DNSController struct {
 }
 
 // NewDNSController creates a new controller
-func NewDNSController(dnsProvider dns.Provider, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time, intervals *DNSControllerIntervalOpts) *DNSController {
+func NewDNSController(dnsProvider dns.Provider, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time, syncInterval, currentZoneSyncEnforceInterval time.Duration) *DNSController {
 	ctrl := &DNSController{
 		dnsProvider:                    dnsProvider,
 		updates:                        updates,
 		wantedLBsLock:                  sync.RWMutex{},
-		currentZoneSyncEnforceInterval: 45 * time.Second,
-		syncInterval:                   3 * time.Second, // FIXME make configurable
+		currentZoneSyncEnforceInterval: currentZoneSyncEnforceInterval,
+		syncInterval:                   syncInterval,
 		metrics:                        metrics,
 		lastCycle:                      lastCycle,
 	}
-
-	if intervals != nil {
-		ctrl.syncInterval = intervals.Sync
-		ctrl.currentZoneSyncEnforceInterval = intervals.CurrentZoneSyncEnforce
-	}
-
 	return ctrl
 }
 
