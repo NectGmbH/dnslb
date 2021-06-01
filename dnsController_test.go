@@ -477,12 +477,12 @@ func getTestDNSController(seed []dns.Zone) (*DNSController, *dnsmock.Provider, c
 	updatesCh := make(chan *LoadbalancerList, 0)
 	cycleCh := make(chan time.Time, 0)
 
-	const CurrentZoneSyncEnforce = time.Second / 2
-	const Sync = time.Second / 2
+	const currentZoneSyncEnforce = time.Second / 2
+	const sync = time.Second / 2
 
 	dnsProvider := dnsmock.NewProvider(seedCopy)
 
-	return NewDNSController(dnsProvider, updatesCh, nil, cycleCh, Sync, CurrentZoneSyncEnforce), dnsProvider, cycleCh, updatesCh
+	return NewDNSController(dnsProvider, updatesCh, nil, cycleCh, sync, currentZoneSyncEnforce), dnsProvider, cycleCh, updatesCh
 }
 
 func waitDNSCycles(ch chan time.Time, n int) {
