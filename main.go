@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -18,6 +19,7 @@ import (
 	"github.com/NectGmbH/dns/provider/autodns"
 	mockdns "github.com/NectGmbH/dns/provider/mock"
 	mockjson "github.com/NectGmbH/dns/provider/mockjson"
+	"github.com/spf13/viper"
 
 	"gopkg.in/yaml.v3"
 
@@ -85,7 +87,34 @@ func (i *mapFlags) Set(value string) error {
 	return nil
 }
 
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
+func logConf() {
+	logrus.Info("[info] running with configuration found at %v", viper.ConfigFileUsed())
+	keys := viper.AllKeys()
+	sort.Strings(keys)
+	settings := viper.AllSettings()
+	for _, k := range keys {
+		logrus.WithFields(logrus.Fields{
+			"key":   k,
+			"value": settings[k],
+		}).Info("dnslb setting")
+	}
+}
 func main() {
+
+	// - Config: ---------------------------------------------------------------
+	var configFile string
+	// Note: magic is here if you set parameter to 'config' and its not good magic.
+	flag.StringVar(&configFile, "cfg", "dnslb.yaml", fmt.Sprintf("name of the config file"))
+
 	// - Parsing: General ------------------------------------------------------
 	var port int
 	var debug bool
@@ -96,7 +125,6 @@ func main() {
 	var election string
 	var jsonLogging bool
 	lbs := make(StringMap)
-
 	flag.IntVar(&port, "port", 8080, "port for /metrics and /healthz http endpoints")
 	flag.Var(&agents, "agent", "Name of all agents for which we should monitor their status reports. Multiple can be given, e.g.: -agent foo -agent bar")
 	flag.Var(&lbs, "lb", "Loadbalancers to use in the format dnsrecord=ip1,ip2. Multiple can be given, e.g.: -lb test.nect.com=http://50.0.0.1:80,tcp://75.0.0.1:443")
@@ -155,20 +183,65 @@ func main() {
 
 	flag.Parse()
 
-	if jsonLogging == true {
-		logrus.SetFormatter(&logrus.JSONFormatter{})
+	// - set defaults in viper
+	// - Parsing: General ------------------------------------------------------
+
+	if isFlagPassed("cfg") {
+		viper.SetConfigName(configFile)       // name of config file (without extension)
+		viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
+		viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
+		viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
+		viper.AddConfigPath(".")              // optionally look for config in the working directory
+		errViper := viper.ReadInConfig()      // Find and read the config file
+		if errViper != nil {                  // Handle errors reading the config file
+			logrus.Warn(fmt.Errorf("warnign  config file: %s", errViper))
+		}
 	}
 
+	if isFlagPassed("json-logging") {
+		viper.Set("json-logging", jsonLogging)
+	}
+
+	if viper.Get("json-logging") == true {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	}
+	logrus.Warn(lbs)
+	if isFlagPassed("lbd") {
+		vlbs := make(map[string][]string)
+		for key, value := range lbs {
+			splitted := strings.Split(value, ",")
+			vlbs[key] = splitted
+		}
+		viper.Set("lb", vlbs)
+	}
+	if isFlagPassed("provider") {
+		viper.Set("dnsProvider", provider)
+	}
+	if isFlagPassed("etcd") {
+		viper.Set("etcEndpoint", []string(etcds))
+	}
+	if isFlagPassed("election") {
+		viper.Set("election", string(election))
+	}
+
+	if isFlagPassed("mock-file") {
+		viper.Set("mockZonePath", string(mockZonePath))
+	}
+	if isFlagPassed("mock-file-state") {
+		viper.Set("mockZoneStatePath", string(mockZoneStatePath))
+	}
+
+	logConf()
 	// - Validation: General ---------------------------------------------------
-	if !strInStrSlice(provider, ProviderNames) {
+	if !strInStrSlice(viper.GetString("dnsProvider"), ProviderNames) {
 		logrus.Fatalf("unknown provider `%s`, expected one of these: %v", provider, ProviderNames)
 	}
 
-	if len(etcds) == 0 {
+	if len(viper.GetStringSlice("etcEndpoint")) == 0 {
 		logrus.Fatal("no etcds given, pass them using -etcd")
 	}
 
-	switch election {
+	switch viper.GetString("election") {
 	case LeaderElectionImplementationSingleton:
 	case LeaderElectionImplementationK8s:
 		if instanceID == "" {
@@ -207,7 +280,8 @@ func main() {
 	}
 
 	// - Validation: AutoDNS ---------------------------------------------------
-	if provider == ProviderNameAutoDNS {
+	switch viper.GetString("dnsProvider") {
+	case ProviderNameAutoDNS:
 		if autoDNSUsername == "" {
 			logrus.Fatalf("missing -autodns-username parameter")
 		}
@@ -215,20 +289,19 @@ func main() {
 		if autoDNSPassword == "" {
 			logrus.Fatalf("missing -autodns-password parameter")
 		}
-	}
 
 	// - Validation: MockDNS ---------------------------------------------------
-	if provider == ProviderNameMock {
-		if mockZonePath == "" {
+	case ProviderNameMock:
+		if viper.Get("mockZonePath") == "" {
 			logrus.Fatalf("missing -mock-file parameter")
 		}
-	}
+
 	// - Validation: MockDNS ---------------------------------------------------
-	if provider == ProviderNameMockSerialize {
-		if mockZonePath == "" {
+	case ProviderNameMockSerialize:
+		if viper.Get("mockZonePath") == "" {
 			logrus.Fatalf("missing -mock-file parameter")
 		}
-		if mockZoneStatePath == "" {
+		if viper.Get("mockZoneStatePath") == "" {
 			logrus.Fatalf("missing -mock-file-state parameter")
 		}
 	}
@@ -242,9 +315,10 @@ func main() {
 
 	// - Setup Provider --------------------------------------------------------
 	var dnsProvider dns.Provider
-	if provider == ProviderNameAutoDNS {
+	switch viper.GetString("dnsProvider") {
+	case ProviderNameAutoDNS:
 		dnsProvider = autodns.NewProvider(autoDNSUsername, autoDNSPassword)
-	} else if provider == ProviderNameMock {
+	case ProviderNameMock:
 		mockBuf, err := ioutil.ReadFile(mockZonePath)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
@@ -267,11 +341,12 @@ func main() {
 		}
 
 		dnsProvider = mockdns.NewProvider(zones)
-	} else if provider == ProviderNameMockSerialize {
-		mockBuf, err := ioutil.ReadFile(mockZonePath)
+	case ProviderNameMockSerialize:
+
+		mockBuf, err := ioutil.ReadFile(viper.GetString("mockZonePath"))
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"path":   mockZonePath,
+				"path":   viper.GetString("mockZonePath"),
 				"reason": err,
 			}).Fatal("couldn't read mock znes")
 		}
@@ -289,7 +364,7 @@ func main() {
 			logrus.WithField("zone", z.String()).Debug("Got mock zone seed")
 		}
 
-		dnsProvider = mockjson.NewProvider(zones, mockZoneStatePath)
+		dnsProvider = mockjson.NewProvider(zones, viper.GetString("mockZoneStatePath"))
 	}
 
 	if debug {
@@ -298,25 +373,27 @@ func main() {
 
 	// - Setup Controllers -----------------------------------------------------
 	metrics := &Metrics{}
-	err := metrics.Init()
-	if err != nil {
-		logrus.Fatalf("couldn't initialize metrics, see: %v", err)
+	metricsErr := metrics.Init()
+	if metricsErr != nil {
+		logrus.Fatalf("couldn't initialize metrics, see: %v", metricsErr)
 	}
 
 	loadbalancers := make([]Loadbalancer, 0)
-	for key, value := range lbs {
-		lb, err := parseLoadbalancer(key, value)
+	logrus.Warn("here")
+	viperLb := viper.GetStringMapStringSlice("lb")
+	logrus.Warn("here")
+	for key, value := range viperLb {
+		lb, err := parseLoadbalancerEndpointList(key, value)
 		if err != nil {
 			logrus.Fatalf("couldn't parse endpoints `%+v` for dns zone `%s`, see: %v", value, key, err)
 		}
-
 		loadbalancers = append(loadbalancers, lb)
 	}
 
 	lbUpdates := make(chan *LoadbalancerList, 0)
 
 	etcd := &ETCD{}
-	err = etcd.Init(etcds)
+	var err = etcd.Init(viper.GetStringSlice("etcEndpoint"))
 	if err != nil {
 		logrus.Fatalf("couldn't connect to etcds `%+v`, see: %v", etcds, err)
 	}
@@ -384,7 +461,7 @@ func main() {
 
 	// - Setup Leaderelection / start ------------------------------------------
 	signalCh := make(chan os.Signal, 1)
-	switch election {
+	switch viper.GetString("election") {
 	case LeaderElectionImplementationK8s:
 		config, err := buildKubeconfig(kubeconfig)
 		if err != nil {
@@ -548,6 +625,21 @@ func parseLoadbalancer(key string, value string) (Loadbalancer, error) {
 		return Loadbalancer{}, fmt.Errorf("couldn't parse EndpointProtocols, see: %v", err)
 	}
 
+	return Loadbalancer{
+		Name:      key,
+		Endpoints: endpoints,
+	}, nil
+}
+
+func parseLoadbalancerEndpointList(key string, values []string) (Loadbalancer, error) {
+	endpoints := make([]EndpointProtocol, 0)
+	for _, s := range values {
+		ep, err := TryParseEndpointProtocol(s)
+		if err != nil {
+			return Loadbalancer{}, fmt.Errorf("couldn't parse `%s` as EndpointProtocol, see: %v", s, err)
+		}
+		endpoints = append(endpoints, ep)
+	}
 	return Loadbalancer{
 		Name:      key,
 		Endpoints: endpoints,
