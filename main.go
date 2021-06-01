@@ -287,10 +287,10 @@ func main() {
 	etcdCtrl := NewETCDController(agents, etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
 
 	dnsCycleCh := make(chan time.Time, 0)
-	var dNSControllerSync = time.Duration(syncIntervalDNSController) * time.Second
-	var dNSControllerDownloadSync = time.Duration(syncIntervalDNSController) * time.Second
+	var dnsControllerSync = time.Duration(syncIntervalDNSController) * time.Second
+	var dnsControllerDownloadSync = time.Duration(syncIntervalDNSController) * time.Second
 
-	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, dNSControllerSync, dNSControllerDownloadSync)
+	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, dnsControllerSync, dnsControllerDownloadSync)
 
 	// - Setup health checking -------------------------------------------------
 	var isLeadingA int64
