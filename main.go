@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -58,11 +59,30 @@ const LeaderElectionImplementationK8s = "k8s"
 // LeaderElectionImplementationRaft for internalraft leader election implementations.
 const LeaderElectionImplementationRaft = "raft"
 
+// LeaderElectionImplementationBully for internalbully leader election implementations.
+const LeaderElectionImplementationBully = "bully"
+
 // LeaderElectionImplementation contains a list of all valid leader election implementations.
 var LeaderElectionImplementation = []string{
 	LeaderElectionImplementationSingleton,
 	LeaderElectionImplementationK8s,
 	LeaderElectionImplementationRaft,
+	LeaderElectionImplementationBully,
+}
+
+type mapFlags map[string]string
+
+func (i *mapFlags) String() string {
+	return "my string representation"
+}
+
+func (i *mapFlags) Set(value string) error {
+	var ss = strings.Split(value, ":")
+	if len(ss) != 3 {
+		return errors.New("empty name")
+	}
+	(*i)[ss[0]] = ss[1] + ":" + ss[2]
+	return nil
 }
 
 func main() {
@@ -111,6 +131,14 @@ func main() {
 	flag.StringVar(&raftAddress, "raft-address", "", "address to listen for raft requests.")
 	flag.StringVar(&raftDir, "raft-dir", "", "directory to store raft state. Must have subdirectory of the instance id in it.")
 	flag.BoolVar(&raftBootstrap, "raft-bootstrap", false, "bootstrap the raft cluster")
+
+	// - Parsing: Bully ---------------------------------------------------
+	var bullyAddress string
+	var bullyProto string
+	var bullyPeers = mapFlags(make(map[string]string))
+	flag.StringVar(&bullyAddress, "bully-address", "", "Address for bully connections")
+	flag.StringVar(&bullyProto, "bully-proto", "tcp4", "Protocol for bully connections")
+	flag.Var(&bullyPeers, "bully-peer", "Peer as 'identifier:address'. Can be specified more than once.")
 
 	// - Parsing: AutoDNS ------------------------------------------------------
 	var autoDNSUsername string
@@ -163,6 +191,16 @@ func main() {
 		}
 		if raftDir == "" {
 			logrus.Fatalf("no raft-dir id specified, pass it using -raft-dir")
+		}
+	case LeaderElectionImplementationBully:
+		if instanceID == "" {
+			logrus.Fatalf("no instance id specified, pass it using -instance-id")
+		}
+		if bullyAddress == "" {
+			logrus.Fatalf("no bully address specified, pass it using -bully-address")
+		}
+		if len(bullyPeers) == 0 {
+			logrus.Fatalf("no bully peers specified, pass them all using -bully-address")
 		}
 	default:
 		logrus.Fatalf("unknown election `%s`, expected one of these: %v", election, LeaderElectionImplementation)
@@ -466,6 +504,39 @@ func main() {
 		<-signalCh
 		logrus.Info("Received ^C, shutting down...")
 		raft.Stop()
+		dnsCtrl.Stop()
+		etcdCtrl.Stop()
+	case LeaderElectionImplementationBully:
+		logrus.Info("bully setup")
+		bc, err := NewBullyController(instanceID, bullyAddress, bullyProto, bullyPeers)
+		if err != nil {
+			logrus.Fatalf("couldn't start bully controller, see: %v", err)
+		}
+		go bc.Run()
+		go func() {
+			for {
+				leading := <-bc.LeaderCh()
+				if leading {
+					atomic.SwapInt64(&isLeadingA, 1)
+					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: started leading")
+
+					logrus.Infof("starting controllers")
+					etcdCtrl.Run()
+					dnsCtrl.Run()
+				} else {
+					atomic.SwapInt64(&isLeadingA, 0)
+					atomic.SwapInt64(&leadingStoppedAtTS, time.Now().Unix())
+					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: stopped leading")
+
+					logrus.Infof("stopping controllers")
+					dnsCtrl.Stop()
+					etcdCtrl.Stop()
+				}
+			}
+		}()
+		<-signalCh
+		logrus.Info("Received ^C, shutting down...")
+		bc.Stop()
 		dnsCtrl.Stop()
 		etcdCtrl.Stop()
 	}
