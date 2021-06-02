@@ -108,7 +108,14 @@ func logConf() {
 		}).Info("dnslb setting")
 	}
 }
+
 func main() {
+	parseCli()
+	cfgValidation()
+	dnsManage()
+}
+
+func parseCli() {
 
 	// - Config: ---------------------------------------------------------------
 	var configFile string
@@ -135,10 +142,10 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "flag indicating whether debug output should be written")
 	flag.BoolVar(&jsonLogging, "json-logging", false, "Always use JSON logging")
 
-	var zoneSyncEnforceIntervalDNSController int
-	var syncIntervalDNSController int
-	flag.IntVar(&zoneSyncEnforceIntervalDNSController, "zone-sync-interval-download", 3600, "DNSController seconds between retrieving current zones from dns provider. Defaults to 1 hour.")
-	flag.IntVar(&syncIntervalDNSController, "zone-sync-interval-upload", 60, "DNSController seconds between uploading to dns provider on change. Defaults to 1 minute.")
+	var syncDNSControllerDownload int
+	var syncDNSControllerUpload int
+	flag.IntVar(&syncDNSControllerDownload, "zone-sync-interval-download", 3600, "DNSController seconds between retrieving current zones from dns provider. Defaults to 1 hour.")
+	flag.IntVar(&syncDNSControllerUpload, "zone-sync-interval-upload", 60, "DNSController seconds between uploading to dns provider on change. Defaults to 1 minute.")
 
 	// - Parsing: Kubernetes ---------------------------------------------------
 	var instanceID string
@@ -184,6 +191,14 @@ func main() {
 	flag.Parse()
 
 	// - set defaults in viper
+	viper.SetDefault("port", 8080)
+	viper.SetDefault("dump-http", false)
+	viper.SetDefault("debug", false)
+	viper.SetDefault("json-logging", false)
+	viper.SetDefault("zone-sync-interval-download", 3600)
+	viper.SetDefault("zone-sync-interval-upload", 60)
+	viper.SetDefault("instance-identifier", hostname)
+	viper.SetDefault("k8s-lock-name", "dnslb")
 	// - Parsing: General ------------------------------------------------------
 
 	if isFlagPassed("cfg") {
@@ -205,8 +220,13 @@ func main() {
 	if viper.Get("json-logging") == true {
 		logrus.SetFormatter(&logrus.JSONFormatter{})
 	}
-	logrus.Warn(lbs)
-	if isFlagPassed("lbd") {
+	if isFlagPassed("port") {
+		viper.Set("port", int(port))
+	}
+	if isFlagPassed("agent") {
+		viper.Set("agents", []string(agents))
+	}
+	if isFlagPassed("lb") {
 		vlbs := make(map[string][]string)
 		for key, value := range lbs {
 			splitted := strings.Split(value, ",")
@@ -223,18 +243,60 @@ func main() {
 	if isFlagPassed("election") {
 		viper.Set("election", string(election))
 	}
+	if isFlagPassed("dump-http") {
+		viper.Set("dump-http", bool(dumpHTTP))
+	}
+	if isFlagPassed("debug") {
+		viper.Set("debug", bool(debug))
+	}
 
+	if isFlagPassed("zone-sync-interval-download") {
+		viper.Set("zone-sync-interval-download", int(syncDNSControllerDownload))
+	}
+	if isFlagPassed("zone-sync-interval-upload") {
+		viper.Set("zone-sync-interval-upload", int(syncDNSControllerUpload))
+	}
 	if isFlagPassed("mock-file") {
 		viper.Set("mockZonePath", string(mockZonePath))
 	}
 	if isFlagPassed("mock-file-state") {
 		viper.Set("mockZoneStatePath", string(mockZoneStatePath))
 	}
+	if isFlagPassed("instance-id") {
+		viper.Set("instance-identifier", string(instanceID))
+	}
+	if isFlagPassed("k8s-kubeconfig") {
+		viper.Set("k8s-kubeconfig", string(kubeconfig))
+	}
+	if isFlagPassed("k8s-lock-name") {
+		viper.Set("k8s-lock-name", string(leaseLockName))
+	}
+	if isFlagPassed("k8s-lock-namespace") {
+		viper.Set("k8s-lock-namespace", string(leaseLockNamespace))
+	}
+	if isFlagPassed("raft-address") {
+		viper.Set("raft-address", string(raftAddress))
+	}
+	if isFlagPassed("raft-dir") {
+		viper.Set("raft-dir", string(raftDir))
+	}
+	if isFlagPassed("raft-bootstrap") {
+		viper.Set("raft-bootstrap", bool(raftBootstrap))
+	}
+	if isFlagPassed("autodns-username") {
+		viper.Set("autodns-username", string(autoDNSUsername))
+	}
+	if isFlagPassed("autodns-password") {
+		viper.Set("autodns-password", string(autoDNSPassword))
+	}
 
 	logConf()
+
+}
+func cfgValidation() {
 	// - Validation: General ---------------------------------------------------
 	if !strInStrSlice(viper.GetString("dnsProvider"), ProviderNames) {
-		logrus.Fatalf("unknown provider `%s`, expected one of these: %v", provider, ProviderNames)
+		logrus.Fatalf("unknown provider `%s`, expected one of these: %v", viper.GetString("dnsProvider"), ProviderNames)
 	}
 
 	if len(viper.GetStringSlice("etcEndpoint")) == 0 {
@@ -244,25 +306,25 @@ func main() {
 	switch viper.GetString("election") {
 	case LeaderElectionImplementationSingleton:
 	case LeaderElectionImplementationK8s:
-		if instanceID == "" {
+		if viper.GetString("instance-identifier") == "" {
 			logrus.Fatalf("no instance id specified, pass it using -instance-id")
 		}
 
-		if leaseLockName == "" {
+		if viper.GetString("k8s-lock-name") == "" {
 			logrus.Fatalf("no lock name specified, pass it using -k8s-lock-name")
 		}
 
-		if leaseLockNamespace == "" {
+		if viper.GetString("k8s-lock-namespace") == "" {
 			logrus.Fatalf("no lock namespace specified, pass it using -k8s-lock-namespace")
 		}
 	case LeaderElectionImplementationRaft:
-		if instanceID == "" {
+		if viper.GetString("instance-identifier") == "" {
 			logrus.Fatalf("no instance id specified, pass it using -instance-id")
 		}
-		if raftAddress == "" {
+		if viper.GetString("raft-address") == "" {
 			logrus.Fatalf("no raft-address specified, pass it using -raft-address")
 		}
-		if raftDir == "" {
+		if viper.GetString("raft-dir") == "" {
 			logrus.Fatalf("no raft-dir id specified, pass it using -raft-dir")
 		}
 	case LeaderElectionImplementationBully:
@@ -276,17 +338,17 @@ func main() {
 			logrus.Fatalf("no bully peers specified, pass them all using -bully-address")
 		}
 	default:
-		logrus.Fatalf("unknown election `%s`, expected one of these: %v", election, LeaderElectionImplementation)
+		logrus.Fatalf("unknown election `%s`, expected one of these: %v", viper.GetString("election"), LeaderElectionImplementation)
 	}
 
 	// - Validation: AutoDNS ---------------------------------------------------
 	switch viper.GetString("dnsProvider") {
 	case ProviderNameAutoDNS:
-		if autoDNSUsername == "" {
+		if viper.GetString("autodns-username") == "" {
 			logrus.Fatalf("missing -autodns-username parameter")
 		}
 
-		if autoDNSPassword == "" {
+		if viper.GetString("autodns-password") == "" {
 			logrus.Fatalf("missing -autodns-password parameter")
 		}
 
@@ -307,22 +369,23 @@ func main() {
 	}
 
 	// - Setup Debugging -------------------------------------------------------
-	if debug {
+	if viper.GetBool("debug") {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+}
 
-	initDumpHTTP(dumpHTTP)
-
+func dnsManage() {
+	initDumpHTTP(viper.GetBool("dump-http"))
 	// - Setup Provider --------------------------------------------------------
 	var dnsProvider dns.Provider
 	switch viper.GetString("dnsProvider") {
 	case ProviderNameAutoDNS:
-		dnsProvider = autodns.NewProvider(autoDNSUsername, autoDNSPassword)
+		dnsProvider = autodns.NewProvider(viper.GetString("autodns-username"), viper.GetString("autodns-password"))
 	case ProviderNameMock:
-		mockBuf, err := ioutil.ReadFile(mockZonePath)
+		mockBuf, err := ioutil.ReadFile(viper.GetString("mockZonePath"))
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"path":   mockZonePath,
+				"path":   viper.GetString("mockZonePath"),
 				"reason": err,
 			}).Fatal("couldn't read mock znes")
 		}
@@ -331,7 +394,7 @@ func main() {
 		err = yaml.Unmarshal(mockBuf, &zones)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"path":   mockZonePath,
+				"path":   viper.GetString("mockZonePath"),
 				"reason": err,
 			}).Fatal("couldn't unmarshal mock znes")
 		}
@@ -355,7 +418,7 @@ func main() {
 		err = yaml.Unmarshal(mockBuf, &zones)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"path":   mockZonePath,
+				"path":   viper.GetString("mockZonePath"),
 				"reason": err,
 			}).Fatal("couldn't unmarshal mock znes")
 		}
@@ -367,7 +430,7 @@ func main() {
 		dnsProvider = mockjson.NewProvider(zones, viper.GetString("mockZoneStatePath"))
 	}
 
-	if debug {
+	if viper.GetBool("debug") {
 		dnsProvider = NewDebugDNSProvider(dnsProvider)
 	}
 
@@ -395,17 +458,17 @@ func main() {
 	etcd := &ETCD{}
 	var err = etcd.Init(viper.GetStringSlice("etcEndpoint"))
 	if err != nil {
-		logrus.Fatalf("couldn't connect to etcds `%+v`, see: %v", etcds, err)
+		logrus.Fatalf("couldn't connect to etcds `%+v`, see: %v", viper.GetStringSlice("etcEndpoint"), err)
 	}
 
 	etcdCycleCh := make(chan time.Time, 0)
-	etcdCtrl := NewETCDController(agents, etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
+	etcdCtrl := NewETCDController(viper.GetStringSlice("agents"), etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
 
 	dnsCycleCh := make(chan time.Time, 0)
-	var dnsControllerSync = time.Duration(syncIntervalDNSController) * time.Second
-	var dnsControllerDownloadSync = time.Duration(syncIntervalDNSController) * time.Second
+	var dnsControllerSyncUpload = time.Duration(viper.GetInt("zone-sync-interval-upload")) * time.Second
+	var dnsControllerSyncDownload = time.Duration(viper.GetInt("zone-sync-interval-download")) * time.Second
 
-	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, dnsControllerSync, dnsControllerDownloadSync)
+	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, dnsControllerSyncUpload, dnsControllerSyncDownload)
 
 	// - Setup health checking -------------------------------------------------
 	var isLeadingA int64
@@ -455,7 +518,7 @@ func main() {
 	})
 
 	go (func() {
-		err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+		err := http.ListenAndServe(fmt.Sprintf(":%d", viper.GetInt("port")), nil)
 		logrus.Fatalf("http server stopped, see: %v", err)
 	})()
 
@@ -463,7 +526,7 @@ func main() {
 	signalCh := make(chan os.Signal, 1)
 	switch viper.GetString("election") {
 	case LeaderElectionImplementationK8s:
-		config, err := buildKubeconfig(kubeconfig)
+		config, err := buildKubeconfig(viper.GetString("k8s-kubeconfig"))
 		if err != nil {
 			logrus.Fatalf("couldn't build kubeconfig, see: %v", err)
 		}
@@ -474,12 +537,12 @@ func main() {
 		// and fewer objects in the cluster watch "all Leases".
 		lock := &resourcelock.LeaseLock{
 			LeaseMeta: metav1.ObjectMeta{
-				Name:      leaseLockName,
-				Namespace: leaseLockNamespace,
+				Name:      viper.GetString("k8s-lock-name"),
+				Namespace: viper.GetString("k8s-lock-namespace"),
 			},
 			Client: kubeclient.CoordinationV1(),
 			LockConfig: resourcelock.ResourceLockConfig{
-				Identity: instanceID,
+				Identity: viper.GetString("instance-identifier"),
 			},
 		}
 
@@ -509,7 +572,7 @@ func main() {
 			Callbacks: leaderelection.LeaderCallbacks{
 				OnStartedLeading: func(ctx context.Context) {
 					atomic.SwapInt64(&isLeadingA, 1)
-					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: started leading")
+					logrus.WithFields(logrus.Fields{"leader": viper.GetString("instance-identifier")}).Info("leaderelection: started leading")
 
 					logrus.Infof("starting controllers")
 					etcdCtrl.Run()
@@ -519,14 +582,14 @@ func main() {
 				OnStoppedLeading: func() {
 					atomic.SwapInt64(&isLeadingA, 0)
 					atomic.SwapInt64(&leadingStoppedAtTS, time.Now().Unix())
-					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: stopped leading")
+					logrus.WithFields(logrus.Fields{"leader": viper.GetString("instance-identifier")}).Info("leaderelection: stopped leading")
 
 					logrus.Infof("stopping controllers")
 					dnsCtrl.Stop()
 					etcdCtrl.Stop()
 				},
 				OnNewLeader: func(identity string) {
-					if identity == instanceID {
+					if identity == viper.GetString("instance-identifier") {
 						return
 					}
 
@@ -536,9 +599,9 @@ func main() {
 		})
 
 		// because the context is closed, the client should report errors
-		_, err = kubeclient.CoordinationV1().Leases(leaseLockNamespace).Get(leaseLockName, metav1.GetOptions{})
+		_, err = kubeclient.CoordinationV1().Leases(viper.GetString("k8s-lock-namespace")).Get(viper.GetString("k8s-lock-name"), metav1.GetOptions{})
 		if err == nil || !strings.Contains(err.Error(), "the leader is shutting down") {
-			logrus.Fatalf("leaderelection: %s: expected to get an error when trying to make a client call: %v", instanceID, err)
+			logrus.Fatalf("leaderelection: %s: expected to get an error when trying to make a client call: %v", viper.GetString("instance-identifier"), err)
 		}
 	case LeaderElectionImplementationSingleton:
 		etcdCtrl.Run()
@@ -555,14 +618,14 @@ func main() {
 		logrus.Info("controller stopped")
 	case LeaderElectionImplementationRaft:
 		logrus.Info("raft setup")
-		raft := NewRaftController(raftAddress, instanceID, raftDir, raftBootstrap)
+		raft := NewRaftController(viper.GetString("raft-address"), viper.GetString("instance-identifier"), viper.GetString("raft-dir"), viper.GetBool("raft-bootstrap"))
 		go raft.Run()
 		go func() {
 			for {
 				leading := <-raft.LeaderCh()
 				if leading {
 					atomic.SwapInt64(&isLeadingA, 1)
-					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: started leading")
+					logrus.WithFields(logrus.Fields{"leader": viper.GetString("instance-identifier")}).Info("leaderelection: started leading")
 
 					logrus.Infof("starting controllers")
 					etcdCtrl.Run()
@@ -570,7 +633,7 @@ func main() {
 				} else {
 					atomic.SwapInt64(&isLeadingA, 0)
 					atomic.SwapInt64(&leadingStoppedAtTS, time.Now().Unix())
-					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: stopped leading")
+					logrus.WithFields(logrus.Fields{"leader": viper.GetString("instance-identifier")}).Info("leaderelection: stopped leading")
 
 					logrus.Infof("stopping controllers")
 					dnsCtrl.Stop()
