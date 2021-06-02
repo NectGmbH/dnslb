@@ -20,7 +20,6 @@ require (
 	github.com/motemen/go-loghttp v0.0.0-20170804080138-974ac5ceac27
 	github.com/namsral/flag v1.7.4-pre
 	github.com/prometheus/client_golang v1.10.0
-	github.com/timtosi/bully-algorithm v0.0.0-20190221194619-063e99eaf6c5 // indirect
 	github.com/spf13/viper v1.7.1 // indirect
 	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 // indirect
 	github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77 // indirect

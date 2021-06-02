@@ -61,15 +61,11 @@ const LeaderElectionImplementationK8s = "k8s"
 // LeaderElectionImplementationRaft for internalraft leader election implementations.
 const LeaderElectionImplementationRaft = "raft"
 
-// LeaderElectionImplementationBully for internalbully leader election implementations.
-const LeaderElectionImplementationBully = "bully"
-
 // LeaderElectionImplementation contains a list of all valid leader election implementations.
 var LeaderElectionImplementation = []string{
 	LeaderElectionImplementationSingleton,
 	LeaderElectionImplementationK8s,
 	LeaderElectionImplementationRaft,
-	LeaderElectionImplementationBully,
 }
 
 type mapFlags map[string]string
@@ -326,16 +322,6 @@ func cfgValidation() {
 		}
 		if viper.GetString("raft-dir") == "" {
 			logrus.Fatalf("no raft-dir id specified, pass it using -raft-dir")
-		}
-	case LeaderElectionImplementationBully:
-		if instanceID == "" {
-			logrus.Fatalf("no instance id specified, pass it using -instance-id")
-		}
-		if bullyAddress == "" {
-			logrus.Fatalf("no bully address specified, pass it using -bully-address")
-		}
-		if len(bullyPeers) == 0 {
-			logrus.Fatalf("no bully peers specified, pass them all using -bully-address")
 		}
 	default:
 		logrus.Fatalf("unknown election `%s`, expected one of these: %v", viper.GetString("election"), LeaderElectionImplementation)
@@ -642,39 +628,6 @@ func dnsManage() {
 		<-signalCh
 		logrus.Info("Received ^C, shutting down...")
 		raft.Stop()
-		dnsCtrl.Stop()
-		etcdCtrl.Stop()
-	case LeaderElectionImplementationBully:
-		logrus.Info("bully setup")
-		bc, err := NewBullyController(instanceID, bullyAddress, bullyProto, bullyPeers)
-		if err != nil {
-			logrus.Fatalf("couldn't start bully controller, see: %v", err)
-		}
-		go bc.Run()
-		go func() {
-			for {
-				leading := <-bc.LeaderCh()
-				if leading {
-					atomic.SwapInt64(&isLeadingA, 1)
-					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: started leading")
-
-					logrus.Infof("starting controllers")
-					etcdCtrl.Run()
-					dnsCtrl.Run()
-				} else {
-					atomic.SwapInt64(&isLeadingA, 0)
-					atomic.SwapInt64(&leadingStoppedAtTS, time.Now().Unix())
-					logrus.WithFields(logrus.Fields{"leader": instanceID}).Info("leaderelection: stopped leading")
-
-					logrus.Infof("stopping controllers")
-					dnsCtrl.Stop()
-					etcdCtrl.Stop()
-				}
-			}
-		}()
-		<-signalCh
-		logrus.Info("Received ^C, shutting down...")
-		bc.Stop()
 		dnsCtrl.Stop()
 		etcdCtrl.Stop()
 	}
