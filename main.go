@@ -442,9 +442,7 @@ func dnsManage() {
 	}
 
 	loadbalancers := make([]Loadbalancer, 0)
-	logrus.Warn("here")
 	viperLb := viper.GetStringMapStringSlice("lb")
-	logrus.Warn("here")
 	for key, value := range viperLb {
 		lb, err := parseLoadbalancerEndpointList(key, value)
 		if err != nil {
