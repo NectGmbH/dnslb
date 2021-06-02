@@ -11,7 +11,6 @@ require (
 	github.com/NectGmbH/dns v0.0.0-20210528143351-fa264a2d9ab8
 	github.com/NectGmbH/health v0.0.0-20210426094827-f2591eccf724
 	github.com/OneOfOne/xxhash v1.2.8
-	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/coreos/etcd v3.3.25+incompatible // indirect
 	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
