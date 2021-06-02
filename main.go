@@ -633,18 +633,6 @@ func dnsManage() {
 	}
 }
 
-func parseLoadbalancer(key string, value string) (Loadbalancer, error) {
-	endpoints, err := TryParseEndpointProtocols(value)
-	if err != nil {
-		return Loadbalancer{}, fmt.Errorf("couldn't parse EndpointProtocols, see: %v", err)
-	}
-
-	return Loadbalancer{
-		Name:      key,
-		Endpoints: endpoints,
-	}, nil
-}
-
 func parseLoadbalancerEndpointList(key string, values []string) (Loadbalancer, error) {
 	endpoints := make([]EndpointProtocol, 0)
 	for _, s := range values {
