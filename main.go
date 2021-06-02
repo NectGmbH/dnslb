@@ -454,7 +454,7 @@ func dnsManage() {
 	lbUpdates := make(chan *LoadbalancerList, 0)
 
 	etcd := &ETCD{}
-	var err = etcd.Init(viper.GetStringSlice("etcEndpoint"))
+	err := etcd.Init(viper.GetStringSlice("etcEndpoint"))
 	if err != nil {
 		logrus.Fatalf("couldn't connect to etcds `%+v`, see: %v", viper.GetStringSlice("etcEndpoint"), err)
 	}
@@ -463,8 +463,8 @@ func dnsManage() {
 	etcdCtrl := NewETCDController(viper.GetStringSlice("agents"), etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
 
 	dnsCycleCh := make(chan time.Time, 0)
-	var dnsControllerSyncUpload = time.Duration(viper.GetInt("zone-sync-interval-upload")) * time.Second
-	var dnsControllerSyncDownload = time.Duration(viper.GetInt("zone-sync-interval-download")) * time.Second
+	dnsControllerSyncUpload := time.Duration(viper.GetInt("zone-sync-interval-upload")) * time.Second
+	dnsControllerSyncDownload := time.Duration(viper.GetInt("zone-sync-interval-download")) * time.Second
 
 	dnsCtrl := NewDNSController(dnsProvider, lbUpdates, metrics, dnsCycleCh, dnsControllerSyncUpload, dnsControllerSyncDownload)
 
