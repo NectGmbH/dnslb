@@ -12,6 +12,7 @@ require (
 	github.com/NectGmbH/health v0.0.0-20210426094827-f2591eccf724
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/coreos/etcd v3.3.25+incompatible // indirect
+	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/hashicorp/raft v1.3.1 // indirect
 	github.com/hashicorp/raft-boltdb v0.0.0-20210422161416-485fa74b0b01 // indirect
@@ -19,7 +20,9 @@ require (
 	github.com/motemen/go-loghttp v0.0.0-20170804080138-974ac5ceac27
 	github.com/namsral/flag v1.7.4-pre
 	github.com/prometheus/client_golang v1.10.0
-	github.com/timtosi/bully-algorithm v0.0.0-20190221194619-063e99eaf6c5 // indirect
+	github.com/spf13/viper v1.7.1 // indirect
+	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 // indirect
+	github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77 // indirect
 	go.etcd.io/etcd v3.3.25+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b // indirect
