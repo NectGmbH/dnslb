@@ -239,11 +239,5 @@ func getTestETCDController(t *testing.T, onUpdate func(*LoadbalancerList), onCyc
 			}
 		}
 	})()
-
-	intervals := &ETCDControllerIntervalOpts{
-		Status:  time.Second / 2,
-		Monitor: time.Second / 2,
-	}
-
-	return NewETCDController(agents, etcd, lbs, updatesChan, nil, cycleChan, intervals), etcd
+	return NewETCDController(agents, etcd, lbs, updatesChan, nil, cycleChan, time.Second/2, time.Second/2), etcd
 }

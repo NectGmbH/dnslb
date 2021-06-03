@@ -39,24 +39,27 @@ type ETCDController struct {
 }
 
 // NewETCDController creates a new controller
-func NewETCDController(agents []string, etcd ETCDProvider, wantedLBs []Loadbalancer, updates chan *LoadbalancerList, metrics *Metrics, lastCycle chan time.Time, intervals *ETCDControllerIntervalOpts) *ETCDController {
+func NewETCDController(
+	agents []string,
+	etcd ETCDProvider,
+	wantedLBs []Loadbalancer,
+	updates chan *LoadbalancerList,
+	metrics *Metrics,
+	lastCycle chan time.Time,
+	monitorInterval time.Duration,
+	statusInterval time.Duration) *ETCDController {
+
 	ctrl := &ETCDController{
 		wanted:          wantedLBs,
 		updates:         updates,
 		agents:          agents,
-		statusInterval:  2 * time.Second,
-		monitorInterval: 30 * time.Second,
+		statusInterval:  statusInterval,
+		monitorInterval: monitorInterval,
 		maxStatusAge:    45 * time.Second,
 		metrics:         metrics,
 		lastCycle:       lastCycle,
 		etcd:            etcd,
 	}
-
-	if intervals != nil {
-		ctrl.statusInterval = intervals.Status
-		ctrl.monitorInterval = intervals.Monitor
-	}
-
 	return ctrl
 }
 
