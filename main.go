@@ -93,7 +93,7 @@ func isFlagPassed(name string) bool {
 	return found
 }
 func logConf() {
-	logrus.Info("[info] running with configuration found at %v", viper.ConfigFileUsed())
+	logrus.Infof("[info] running with configuration found at %v", viper.ConfigFileUsed())
 	keys := viper.AllKeys()
 	sort.Strings(keys)
 	settings := viper.AllSettings()
@@ -138,6 +138,11 @@ func parseCli() {
 	flag.BoolVar(&debug, "debug", false, "flag indicating whether debug output should be written")
 	flag.BoolVar(&jsonLogging, "json-logging", false, "Always use JSON logging")
 
+	// - Parsing: etcdController-------------------------------------------------
+	var etcdMonitorInterval int
+	flag.IntVar(&etcdMonitorInterval, "etcd-interval-monitoring", 30, "Seconds between syncing from etcd. Defaults to 30 seconds.")
+
+	// - Parsing: DNSController-------------------------------------------------
 	var syncDNSControllerDownload int
 	var syncDNSControllerUpload int
 	flag.IntVar(&syncDNSControllerDownload, "zone-sync-interval-download", 3600, "DNSController seconds between retrieving current zones from dns provider. Defaults to 1 hour.")
@@ -235,6 +240,9 @@ func parseCli() {
 	}
 	if isFlagPassed("etcd") {
 		viper.Set("etcEndpoint", []string(etcds))
+	}
+	if isFlagPassed("etcd-interval-monitoring") {
+		viper.Set("etcd-interval-monitoring", int(etcdMonitorInterval))
 	}
 	if isFlagPassed("election") {
 		viper.Set("election", string(election))
@@ -446,7 +454,16 @@ func dnsManage() {
 	}
 
 	etcdCycleCh := make(chan time.Time, 0)
-	etcdCtrl := NewETCDController(viper.GetStringSlice("agents"), etcd, loadbalancers, lbUpdates, metrics, etcdCycleCh, nil)
+	etcdIntervalMonitoring := time.Duration(viper.GetInt("etcd-interval-monitoring")) * time.Second
+	etcdCtrl := NewETCDController(
+		viper.GetStringSlice("agents"),
+		etcd,
+		loadbalancers,
+		lbUpdates,
+		metrics,
+		etcdCycleCh,
+		etcdIntervalMonitoring,
+		2*time.Second)
 
 	dnsCycleCh := make(chan time.Time, 0)
 	dnsControllerSyncUpload := time.Duration(viper.GetInt("zone-sync-interval-upload")) * time.Second
