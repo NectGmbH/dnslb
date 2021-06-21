@@ -8,7 +8,7 @@ require (
 	github.com/Jille/raft-grpc-leader-rpc v1.1.0 // indirect
 	github.com/Jille/raft-grpc-transport v1.1.1 // indirect
 	github.com/Jille/raftadmin v1.2.0 // indirect
-	github.com/NectGmbH/dns v0.0.0-20210621130436-ee41f6b707bd
+	github.com/NectGmbH/dns v0.0.0-20210621142925-9f6fd7ecf455
 	github.com/NectGmbH/health v0.0.0-20210426094827-f2591eccf724
 	github.com/OneOfOne/xxhash v1.2.8
 	github.com/coreos/etcd v3.3.25+incompatible // indirect
