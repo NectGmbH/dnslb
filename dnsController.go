@@ -142,13 +142,18 @@ func (c *DNSController) updateWantedZones() error {
 		// First we get rid of all current A records in the zone with the same name as our lbs
 		for _, lb := range lbs {
 			aName := strings.TrimSuffix(lb.Name, "."+zone.Name)
-			zone.RemoveRecordsWithName(aName)
+			if lb.Name == zone.Name {
+				aName = ""
+			}
+			zone.RemoveRecordsWithName(aName, dns.RecordTypeA)
 		}
 
 		// Now we can re-add all endpoints
 		for _, lb := range lbs {
 			aName := strings.TrimSuffix(lb.Name, "."+zone.Name)
-
+			if lb.Name == zone.Name {
+				aName = ""
+			}
 			for _, endpoint := range lb.Endpoints {
 				rec := dns.Record{
 					Class:      dns.ClassIN,
